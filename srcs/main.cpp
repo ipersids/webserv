@@ -59,9 +59,26 @@ int main(int argc, char *argv[])
     	std::cerr << "Exception caught: " << e.what() << std::endl;
 		return -1;
 	}
-	
 
+	int epoll_fd = epoll_create1(0);
+	if (epoll_fd == -1)
+	{
+		std::cerr << "epoll_create1 failed" << std::endl;
+		return -1;
+	}
+	epoll_event event;
+	event.events = EPOLLIN; 
+	event.data.fd = server_fd;
+
+	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &event) == -1) 
+	{
+    std::cerr << "epoll_ctl failed: " << strerror(errno) << std::endl;
+    return -1;
+	}
+	epoll_event events[MAX_EVENTS];
 }
+
+
 
 sockaddr_in init()
 {
