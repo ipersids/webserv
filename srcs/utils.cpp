@@ -1,33 +1,20 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   webserv.hpp                                        :+:      :+:    :+:   */
+/*   utils.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/07/18 13:48:02 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/07/20 14:10:39 by jrimpila         ###   ########.fr       */
+/*   Created: 2025/07/20 13:59:37 by jrimpila          #+#    #+#             */
+/*   Updated: 2025/07/20 14:03:12 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#pragma once
+#include "../includes/webserv.hpp"
 
-#include <iostream>
-#include <vector>
-#include <string>
-#include <exception>
-#include <stdexcept>
-
-#include <poll.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <sys/epoll.h>
-
-
-#include "macros.hpp"
-#include "data.hpp"
-
-//parsing 
-
-void parse(int argc, char *argv[]);
-int throwError(const char *str);
+int throwError(const char *str)
+{
+    
+    std::cerr << str << std::endl;
+    return -1;
+}

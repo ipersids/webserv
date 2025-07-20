@@ -6,7 +6,7 @@
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/18 13:48:48 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/07/18 15:01:22 by jrimpila         ###   ########.fr       */
+/*   Updated: 2025/07/20 14:11:02 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,13 +42,11 @@ int main(int argc, char *argv[])
 	//seems unnecessary here because we are not trying to restart if the system calls during init fail?
 
 	if (bind(server_fd, (sockaddr*)&addr, sizeof(addr)) == -1){
-    	std::cerr << "Bind failed:" << std::endl;
-    	return -1;
+    	return throwError("bind failed");
 	}
 
 	if (listen(server_fd, data.getMaxConnections()) == -1){
-    	std::cerr << "listen failed:" << std::endl;
-    	return -1;
+    	return throwError("listen failed");
 	}
 
 	std::vector<pollfd> fds;
@@ -63,8 +61,7 @@ int main(int argc, char *argv[])
 	int epoll_fd = epoll_create1(0);
 	if (epoll_fd == -1)
 	{
-		std::cerr << "epoll_create1 failed" << std::endl;
-		return -1;
+		return throwError("epoll_create1 failed");
 	}
 	epoll_event event;
 	event.events = EPOLLIN; 
@@ -72,8 +69,7 @@ int main(int argc, char *argv[])
 
 	if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_fd, &event) == -1) 
 	{
-    std::cerr << "epoll_ctl failed: " << strerror(errno) << std::endl;
-    return -1;
+    	return throwError("epoll_ctl failed.");
 	}
 	epoll_event events[MAX_EVENTS];
 	
@@ -84,8 +80,7 @@ int main(int argc, char *argv[])
 		nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, timeout);
 		if (nfds == -1)
 		{
-			std::cerr<< "epoll_wait faied" << std::endl;
-			return -1;
+			return throwError("epoll_wait failed.");
 		}
 		handle_events(nfds, events);
 	}
