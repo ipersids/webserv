@@ -76,10 +76,24 @@ int main(int argc, char *argv[])
     return -1;
 	}
 	epoll_event events[MAX_EVENTS];
+	
+	bool serverRunning = true;
+	int nfds;
+	while (serverRunning)
+	{
+		nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, timeout);
+		if (nfds == -1)
+		{
+			std::cerr<< "epoll_wait faied" << std::endl;
+			return -1;
+		}
+		handle_events(nfds, events);
+	}
 }
 
 
-
+//Now this is only listening to one port, each port needs to have a socket according to LLM
+//so you would add a container that would store a list of ports
 sockaddr_in init()
 {
 	sockaddr_in addr{};
