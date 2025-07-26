@@ -6,13 +6,26 @@
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/18 13:48:48 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/07/20 14:11:02 by jrimpila         ###   ########.fr       */
+/*   Updated: 2025/07/26 11:47:11 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../includes/webserv.hpp"
 
 static sockaddr_in init();
+
+int handle_events(int nfds, epoll_event events[]){
+
+	(void) nfds;
+	(void) events;
+	return 0;
+}
+
+void parse(int argc, char *argv[])
+{
+	(void) argc;
+	(void) argv;
+}
 
 int main(int argc, char *argv[])
 {
@@ -71,13 +84,13 @@ int main(int argc, char *argv[])
 	{
     	return throwError("epoll_ctl failed.");
 	}
-	epoll_event events[MAX_EVENTS];
+	epoll_event events[MaxEvents];
 	
 	bool serverRunning = true;
 	int nfds;
 	while (serverRunning)
 	{
-		nfds = epoll_wait(epoll_fd, events, MAX_EVENTS, timeout);
+		nfds = epoll_wait(epoll_fd, events, MaxEvents, timeout);
 		if (nfds == -1)
 		{
 			return throwError("epoll_wait failed.");
