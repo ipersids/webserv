@@ -6,7 +6,7 @@
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/18 14:01:14 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/07/18 14:56:49 by jrimpila         ###   ########.fr       */
+/*   Updated: 2025/07/26 11:48:23 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,8 +25,8 @@ class Data{
 		int getMaxConnections();
 
 	private:
-		Data();
-		~Data();
+		Data() = default;
+		~Data() = default;
 		int maxConnections;
 		
 };
