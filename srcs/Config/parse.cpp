@@ -20,14 +20,14 @@ int main(int argc, char *argv[]) {
     // 1. Handle command-line arguments to get the config file path
     Config config;
 
+    config = DummyConfig();
+    PrintConfig(config);
     try {
         parse(argc, argv, config);
     } catch(std::exception &e) {
         std::cerr << "Exception caught: " << e.what() << std::endl;
 		return -1;
     }
-
-    std::cout << config.buffer.str() << std::endl;
 
     return 0;
 }
