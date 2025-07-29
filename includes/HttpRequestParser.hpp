@@ -57,8 +57,8 @@
 #include "HttpRequestUtils.hpp"
 
 // return values
-#define PARSE_SUCCESS 0;
-#define PARSE_ERROR 128;
+#define PARSE_SUCCESS 0
+#define PARSE_ERROR 128
 
 enum HttpRequestParserError {
   BAD_REQUEST = 400,
@@ -77,14 +77,19 @@ class HttpRequestParser {
 
  private:
   static const size_t MAX_REQUEST_TARGET_LENGTH = 2048;
+  static const size_t MAX_REQUEST_HEADERS_COUNT = 100;
 
  private:
   int parseRequestLine(std::string_view request_line, HttpRequest& request);
   int parseRequestHeaders(std::string_view headers, HttpRequest& request);
+  int parseRequestHeaderLine(std::string_view header, HttpRequest& request);
   int parseRequestBody(std::string_view body, HttpRequest& request);
 
   bool validateRequestTarget(const std::string& terget, HttpRequest& request);
   bool validateHttpVersion(const std::string& version, HttpRequest& request);
+  bool validateHeaderField(const std::string& field);
+  bool validateAndTrimHeaderValue(std::string& value);
+  bool validateTokenChar(char ch);
 };
 
 #endif

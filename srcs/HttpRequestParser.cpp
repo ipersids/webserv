@@ -8,7 +8,11 @@
  * and validating HTTP/1.1 requests. Processes raw socket data
  * into structured HTTP request objects.
  *
- * @note for now do not trim any extra spaces
+ * @note
+ * - for now do not trim any extra spaces
+ * - some headers can't have multiple values and be combined with comma
+ * - some headers might need extra validation ()
+ * - we can also add more lenght limits
  *
  * @see HttpRequestParser.hpp for class interface and TODO items
  * @see https://tools.ietf.org/html/rfc7230 (HTTP/1.1 Message Syntax)
@@ -47,7 +51,7 @@ int HttpRequestParser::parseRequest(const std::string& raw_request,
   // step 2: handle headers
   size_t headers_start = request_line_end + 2;
   if (headers_start >= message.length()) {
-    request.setErrorStatus("Missing headers section",
+    request.setErrorStatus("Headers section should have at least Host field",
                            HttpRequestParserError::BAD_REQUEST);
     return PARSE_ERROR;
   }
@@ -57,8 +61,9 @@ int HttpRequestParser::parseRequest(const std::string& raw_request,
 
   if (!has_body) {
     if (message.substr(message.length() - 2) != "\r\n") {
-      request.setErrorStatus("HTTP messages MUST end with \\r\\n (CRLF)",
-                             HttpRequestParserError::BAD_REQUEST);
+      request.setErrorStatus(
+          "HTTP messages MUST use \\r\\n (CRLF) as line terminators",
+          HttpRequestParserError::BAD_REQUEST);
       return PARSE_ERROR;
     }
     headers_end = message.length() - 2;
@@ -66,7 +71,7 @@ int HttpRequestParser::parseRequest(const std::string& raw_request,
 
   if (headers_end > headers_start) {
     std::string_view headers_content =
-        message.substr(headers_start, headers_end - headers_start);
+        message.substr(headers_start, headers_end - headers_start + 2);
     if (parseRequestHeaders(headers_content, request)) {
       return PARSE_ERROR;
     }
@@ -146,8 +151,68 @@ int HttpRequestParser::parseRequestLine(std::string_view request_line,
 
 int HttpRequestParser::parseRequestHeaders(std::string_view headers,
                                            HttpRequest& request) {
-  (void)request;
-  (void)headers;
+  size_t header_counter = 0;
+  size_t start_pos = 0;
+
+  while (start_pos < headers.size()) {
+    if (header_counter >= MAX_REQUEST_HEADERS_COUNT) {
+      request.setErrorStatus(
+          "Amount of headers exceeded limit: " + std::to_string(header_counter),
+          HttpRequestParserError::BAD_REQUEST);
+      return PARSE_ERROR;
+    }
+
+    size_t end_pos = headers.find("\r\n", start_pos);
+    std::string_view header_line =
+        headers.substr(start_pos, end_pos - start_pos);
+    start_pos = end_pos + 2;
+
+    if (header_line.empty()) {
+      request.setErrorStatus(
+          "Empty lines in header section are not allowed: line " +
+              std::to_string(header_counter + 1),
+          HttpRequestParserError::BAD_REQUEST);
+      return PARSE_ERROR;
+    }
+
+    if (parseRequestHeaderLine(header_line, request) != PARSE_SUCCESS) {
+      return PARSE_ERROR;
+    }
+
+    header_counter += 1;
+  }
+
+  return PARSE_SUCCESS;
+}
+
+int HttpRequestParser::parseRequestHeaderLine(std::string_view header,
+                                              HttpRequest& request) {
+  size_t colon_pos = header.find(':');
+  if (colon_pos == std::string_view::npos) {
+    request.setErrorStatus(
+        "Malformed header - missing colon: " + std::string(header),
+        HttpRequestParserError::BAD_REQUEST);
+    return PARSE_ERROR;
+  }
+
+  std::string field_name = std::string(header.substr(0, colon_pos));
+  std::string value = std::string(header.substr(colon_pos + 1));
+
+  if (!validateHeaderField(field_name)) {
+    request.setErrorStatus(
+        "Malformed header - invalid field name in line: " + std::string(header),
+        HttpRequestParserError::BAD_REQUEST);
+    return PARSE_ERROR;
+  }
+  if (!validateAndTrimHeaderValue(value)) {
+    request.setErrorStatus(
+        "Malformed header - invalid value in line: " + std::string(header),
+        HttpRequestParserError::BAD_REQUEST);
+    return PARSE_ERROR;
+  }
+
+  request.insertHeader(field_name, value);
+
   return PARSE_SUCCESS;
 }
 
@@ -217,4 +282,52 @@ bool HttpRequestParser::validateHttpVersion(const std::string& version,
   }
 
   return true;
+}
+
+bool HttpRequestParser::validateHeaderField(const std::string& field) {
+  if (field.empty()) {
+    return false;
+  }
+  for (auto ch : field) {
+    if (!validateTokenChar(ch)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool HttpRequestParser::validateAndTrimHeaderValue(std::string& value) {
+  size_t start = 0;
+  size_t end = value.size();
+
+  while (start < end && (value[start] == ' ' || value[start] == '\t')) {
+    ++start;
+  }
+  while (end > start && (value[end - 1] == ' ' || value[end - 1] == '\t')) {
+    --end;
+  }
+
+  if (start == end) {
+    return false;
+  }
+
+  for (size_t i = start; i < end; ++i) {
+    unsigned char ch = static_cast<unsigned char>(value[i]);
+    if (ch <= 31 || ch == 127 || ch == '\r' || ch == '\n') {
+      return false;
+    }
+  }
+
+  value = value.substr(start, end);
+  return true;
+}
+
+bool HttpRequestParser::validateTokenChar(char ch) {
+  // RFC 7230 tchar definition
+  return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||
+         (ch >= '0' && ch <= '9') || ch == '!' || ch == '#' || ch == '$' ||
+         ch == '%' || ch == '&' || ch == '\'' || ch == '*' || ch == '+' ||
+         ch == '-' || ch == '.' || ch == '^' || ch == '_' || ch == '`' ||
+         ch == '|' || ch == '~';
 }

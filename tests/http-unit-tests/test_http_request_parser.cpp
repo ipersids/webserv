@@ -35,8 +35,8 @@ static void test_basic_get_request() {
   assert(request.getMethodCode() == HttpMethod::GET);
   assert(request.getRequestTarget() == "/index.html");
   assert(request.getHttpVersion() == "HTTP/1.1");
-  // assert(request.hasHeader("host"));
-  // assert(request.getHeader("host") == "example.com");
+  assert(request.hasHeader("host"));
+  assert(request.getHeader("host") == "example.com");
   assert(request.getBody().empty());
 
   std::cout << "\t✓ passed" << std::endl;
@@ -62,12 +62,12 @@ static void test_post_request_with_body() {
   assert(request.getMethodCode() == HttpMethod::POST);
   assert(request.getRequestTarget() == "/api/users");
   assert(request.getHttpVersion() == "HTTP/1.1");
-  // assert(request.hasHeader("host"));
-  // assert(request.getHeader("host") == "api.example.com");
-  // assert(request.hasHeader("content-type"));
-  // assert(request.getHeader("content-type") == "application/json");
-  // assert(request.hasHeader("content-length"));
-  // assert(request.getHeader("content-length") == "26");
+  assert(request.hasHeader("host"));
+  assert(request.getHeader("host") == "api.example.com");
+  assert(request.hasHeader("content-type"));
+  assert(request.getHeader("content-type") == "application/json");
+  assert(request.hasHeader("content-length"));
+  assert(request.getHeader("content-length") == "26");
   assert(request.getBody() == "{\"name\":\"John\",\"age\":30}");
 
   std::cout << "\t✓ passed" << std::endl;
@@ -91,10 +91,10 @@ static void test_delete_request() {
   assert(request.getMethodCode() == HttpMethod::DELETE);
   assert(request.getRequestTarget() == "/api/users/123");
   assert(request.getHttpVersion() == "HTTP/1.1");
-  // assert(request.hasHeader("host"));
-  // assert(request.getHeader("host") == "api.example.com");
-  // assert(request.hasHeader("authorization"));
-  // assert(request.getHeader("authorization") == "Bearer token123");
+  assert(request.hasHeader("host"));
+  assert(request.getHeader("host") == "api.example.com");
+  assert(request.hasHeader("authorization"));
+  assert(request.getHeader("authorization") == "Bearer token123");
 
   std::cout << "\t\t✓ passed" << std::endl;
 }
@@ -116,17 +116,17 @@ static void test_multiple_headers() {
 
   ASSERT_PARSE_SUCCESS(parser, multi_header_request, request);
 
-  // assert(request.hasHeader("host"));
-  // assert(request.hasHeader("user-agent"));
-  // assert(request.hasHeader("accept"));
-  // assert(request.hasHeader("accept-language"));
-  // assert(request.hasHeader("connection"));
+  assert(request.hasHeader("host"));
+  assert(request.hasHeader("user-agent"));
+  assert(request.hasHeader("accept"));
+  assert(request.hasHeader("accept-language"));
+  assert(request.hasHeader("connection"));
 
-  // assert(request.getHeader("host") == "example.com");
-  // assert(request.getHeader("user-agent") == "Mozilla/5.0");
-  // assert(request.getHeader("accept") == "application/json");
-  // assert(request.getHeader("accept-language") == "en-US,en;q=0.9");
-  // assert(request.getHeader("connection") == "keep-alive");
+  assert(request.getHeader("host") == "example.com");
+  assert(request.getHeader("user-agent") == "Mozilla/5.0");
+  assert(request.getHeader("accept") == "application/json");
+  assert(request.getHeader("accept-language") == "en-US,en;q=0.9");
+  assert(request.getHeader("connection") == "keep-alive");
 
   std::cout << "\t\t✓ passed" << std::endl;
 }
