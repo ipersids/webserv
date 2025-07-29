@@ -8,7 +8,7 @@
  * It provides functionality to store and retrieve HTTP request components
  * including method, target, version, headers, and body.
  *
- * @note This is a storage class - parsing functionality will be implemented
+ * @note This is a storage class - parsing functionality is implemented
  *       in a separate HttpRequestParser class.
  * @note Header field names are case-insensitive per RFC 7230 Section 3.2
  *
@@ -23,7 +23,32 @@
 #include <map>
 #include <string>
 
-enum class HttpMethod { GET, POST, DELETE, UNKNOWN };
+#include "HttpRequestUtils.hpp"
+
+// Common methods https://datatracker.ietf.org/doc/html/rfc7231#section-4
+// Registry: https://www.iana.org/assignments/http-methods/http-methods.xhtml
+enum class HttpMethod {
+  GET,
+  HEAD,
+  POST,
+  PUT,
+  DELETE,
+  CONNECT,
+  OPTIONS,
+  TRACE,
+  UNKNOWN
+};
+
+enum class HttpRequestResult { PROCESSING, SUCCESS, ERROR };
+
+struct HttpRequestState {
+  HttpRequestResult result;
+  std::string message;
+  int status_code;
+
+  HttpRequestState(HttpRequestResult res = HttpRequestResult::PROCESSING,
+                   const std::string& msg = "", int code = -1);
+};
 
 class HttpRequest {
  public:
@@ -37,6 +62,8 @@ class HttpRequest {
   void setHttpVersion(const std::string& http_version);
   void insertHeader(const std::string& field_name, std::string& value);
   void setBody(const std::string& body);
+  void setSuccessStatus(int status_code = 200);
+  void setErrorStatus(const std::string& error_msg, int error_code);
 
   const std::string& getMethod(void) const;
   const HttpMethod& getMethodCode(void) const;
@@ -45,6 +72,9 @@ class HttpRequest {
   const std::string& getHeader(const std::string& field_name) const;
   bool hasHeader(const std::string& field_name) const;
   const std::string& getBody(void) const;
+  const HttpRequestState& getStatus(void) const;
+
+  bool isValid(void) const;
 
  private:
   // Request Line https://datatracker.ietf.org/doc/html/rfc7230#autoid-17
@@ -56,9 +86,8 @@ class HttpRequest {
   std::map<std::string, std::string> _headers;
   // Message Body https://datatracker.ietf.org/doc/html/rfc7230#autoid-26
   std::string _body;
-
- private:
-  std::string toLowerCase(const std::string& str) const;
+  // Error managment
+  HttpRequestState _status;
 };
 
 #endif

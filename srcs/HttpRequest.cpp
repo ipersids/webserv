@@ -1,6 +1,6 @@
 /**
  * @file HttpRequest.cpp
- * @brief HTTP Request parsing and handling class
+ * @brief HTTP Request storage and representation class
  * @author Julia Persidskaia (ipersids)
  * @date 2025-07-28
  *
@@ -11,13 +11,15 @@
 /** Constructor and distructor */
 
 HttpRequest::HttpRequest()
- : _method_code(HttpMethod::UNKNOWN), _method_raw(""), _request_target(""),
-   _http_version(""), _headers(), _body("") {
-}
+    : _method_code(HttpMethod::UNKNOWN),
+      _method_raw(""),
+      _request_target(""),
+      _http_version(""),
+      _headers(),
+      _body(""),
+      _status() {}
 
-HttpRequest::~HttpRequest() {
-  _headers.clear();
-}
+HttpRequest::~HttpRequest() { _headers.clear(); }
 
 /** Setters */
 
@@ -26,10 +28,20 @@ void HttpRequest::setMethod(const std::string& method) {
 
   if (method == "GET") {
     _method_code = HttpMethod::GET;
+  } else if (method == "HEAD") {
+    _method_code = HttpMethod::HEAD;
   } else if (method == "POST") {
     _method_code = HttpMethod::POST;
+  } else if (method == "PUT") {
+    _method_code = HttpMethod::PUT;
   } else if (method == "DELETE") {
     _method_code = HttpMethod::DELETE;
+  } else if (method == "CONNECT") {
+    _method_code = HttpMethod::CONNECT;
+  } else if (method == "OPTIONS") {
+    _method_code = HttpMethod::OPTIONS;
+  } else if (method == "TRACE") {
+    _method_code = HttpMethod::TRACE;
   } else {
     _method_code = HttpMethod::UNKNOWN;
   }
@@ -49,15 +61,22 @@ void HttpRequest::insertHeader(const std::string& field_name,
   _headers.insert({lowercase_name, value});
 }
 
-void HttpRequest::setBody(const std::string& body) {
-  _body = body;
+void HttpRequest::setBody(const std::string& body) { _body = body; }
+
+void HttpRequest::setSuccessStatus(int status_code) {
+  _status.result = HttpRequestResult::SUCCESS;
+  _status.status_code = status_code;
+}
+
+void HttpRequest::setErrorStatus(const std::string& error_msg, int error_code) {
+  _status.result = HttpRequestResult::ERROR;
+  _status.message = error_msg;
+  _status.status_code = error_code;
 }
 
 /** Getters */
 
-const std::string& HttpRequest::getMethod(void) const {
-  return _method_raw;
-}
+const std::string& HttpRequest::getMethod(void) const { return _method_raw; }
 
 const HttpMethod& HttpRequest::getMethodCode(void) const {
   return _method_code;
@@ -86,15 +105,16 @@ bool HttpRequest::hasHeader(const std::string& field_name) const {
   return _headers.find(lowercase_name) != _headers.end();
 }
 
-const std::string& HttpRequest::getBody(void) const {
-  return _body;
+const std::string& HttpRequest::getBody(void) const { return _body; }
+
+const HttpRequestState& HttpRequest::getStatus(void) const { return _status; }
+
+bool HttpRequest::isValid(void) const {
+  return _status.result == HttpRequestResult::SUCCESS;
 }
 
 /** Helpers */
 
-std::string HttpRequest::toLowerCase(const std::string& str) const {
-  std::string result = str;
-  std::transform(result.begin(), result.end(), result.begin(),
-                 [](unsigned char c) { return std::tolower(c); });
-  return result;
-}
+HttpRequestState::HttpRequestState(HttpRequestResult res,
+                                   const std::string& msg, int code)
+    : result(res), message(msg), status_code(code) {}
