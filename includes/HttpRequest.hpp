@@ -11,8 +11,6 @@
  * @note This is a storage class - parsing functionality is implemented
  *       in a separate HttpRequestParser class.
  * @note Header field names are case-insensitive per RFC 7230 Section 3.2
- *
- * @todo Handle duplicate header field names according to RFC 7230 Section 3.2.2
  */
 
 #ifndef _HTTP_REQUEST_HPP

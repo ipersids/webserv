@@ -58,7 +58,12 @@ void HttpRequest::setHttpVersion(const std::string& http_version) {
 void HttpRequest::insertHeader(const std::string& field_name,
                                std::string& value) {
   std::string lowercase_name = toLowerCase(field_name);
-  _headers.insert({lowercase_name, value});
+  auto it = _headers.find(lowercase_name);
+  if (it != _headers.end()) {
+    it->second += ", " + value;
+  } else {
+    _headers.insert({lowercase_name, value});
+  }
 }
 
 void HttpRequest::setBody(const std::string& body) { _body = body; }
