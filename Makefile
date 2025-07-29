@@ -12,7 +12,9 @@ VPATH		:= $(SRC_DIRS)
 
 # Sources and objects
 SRCS		:= utils.cpp data.cpp ConfigParser.cpp \
-			HttpRequest.cpp
+			HttpRequest.cpp \
+			HttpRequestUtils.cpp \
+			HttpRequestParser.cpp
 SRC_MAIN	:= main.cpp
 
 OBJS		:= $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
@@ -53,8 +55,9 @@ run: all
 # Testing
 LIB_NAME		:= libwebserv.a
 TEST_NAME		:= test.out
-TEST_SRCS		:= tests/http-unit-tests/test_http_request.cpp \
-				tests/test_main.cpp
+TEST_SRCS		:= tests/test_main.cpp \
+				tests/http-unit-tests/test_http_request.cpp \
+				tests/http-unit-tests/test_http_request_parser.cpp
 TEST_SRCS_WITH_PATHS	:= $(addprefix srcs/, $(SRCS)) $(TEST_SRCS)
 
 test: $(OBJ_DIR) $(LIB_NAME)

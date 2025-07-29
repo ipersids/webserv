@@ -193,5 +193,5 @@ void run_http_request_tests() {
   test_complete_request();
   test_edge_cases();
 
-  std::cout << "\nAll HttpRequest tests passed!" << std::endl;
+  std::cout << "\nAll HttpRequest tests passed!\n" << std::endl;
 }
