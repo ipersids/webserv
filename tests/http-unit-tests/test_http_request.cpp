@@ -4,8 +4,6 @@
 
 #include "HttpRequest.hpp"
 
-/// @todo duplicates in header fuild names....
-
 static void test_constructor() {
   std::cout << "Testing HttpRequest constructor..." << std::flush;
 
@@ -151,6 +149,27 @@ static void test_complete_request() {
   std::cout << "\t✓ passed" << std::endl;
 }
 
+static void test_request_with_header_duplicates() {
+  std::cout << "Testing request with header duplicates..." << std::flush;
+
+  HttpRequest request;
+
+  std::string value_1 = "value1";
+  std::string value_2 = "value2";
+  std::string value_3 = "value3";
+
+  request.insertHeader("X-Test", value_1);
+  request.insertHeader("X-Test", value_2);
+
+  assert(request.hasHeader("X-Test"));
+  assert(request.getHeader("X-Test") == "value1, value2");
+
+  request.insertHeader("x-test", value_3);
+  assert(request.getHeader("X-Test") == "value1, value2, value3");
+
+  std::cout << "\t✓ passed" << std::endl;
+}
+
 static void test_edge_cases() {
   std::cout << "Testing edge cases..." << std::flush;
 
@@ -191,6 +210,7 @@ void run_http_request_tests() {
   test_header_operations();
   test_body_operations();
   test_complete_request();
+  test_request_with_header_duplicates();
   test_edge_cases();
 
   std::cout << "\nAll HttpRequest tests passed!\n" << std::endl;

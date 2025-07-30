@@ -2,7 +2,8 @@
  * @file HttpRequestParser.cpp
  * @brief HTTP Request parsing and handling class implementation
  * @author Julia Persidskaia (ipersids)
- * @date 2025-07-25
+ * @date 2025-07-30
+ * @version 1.0
  *
  * Implementation of the HttpRequestParser class for parsing
  * and validating HTTP/1.1 requests. Processes raw socket data
@@ -20,10 +21,18 @@
 
 #include "HttpRequestParser.hpp"
 
-#include <sstream>
+// Constructors
 
 HttpRequestParser::HttpRequestParser() {}
 
+// Parsing
+
+/**
+ * @brief Parse raw HTTP request string into HttpRequest object
+ * @param raw_request Raw HTTP request data
+ * @param request HttpRequest object to populate
+ * @return PARSE_SUCCESS (0) on success, PARSE_ERROR (128) on failure
+ */
 int HttpRequestParser::parseRequest(const std::string& raw_request,
                                     HttpRequest& request) {
   if (raw_request.empty()) {
@@ -91,6 +100,12 @@ int HttpRequestParser::parseRequest(const std::string& raw_request,
   return PARSE_SUCCESS;
 }
 
+/**
+ * @brief Parse HTTP request line (method, target, version)
+ * @param request_line Request line string view
+ * @param request HttpRequest object to populate
+ * @return PARSE_SUCCESS on success, PARSE_ERROR on failure
+ */
 int HttpRequestParser::parseRequestLine(std::string_view request_line,
                                         HttpRequest& request) {
   if (request_line.empty()) {
@@ -149,6 +164,12 @@ int HttpRequestParser::parseRequestLine(std::string_view request_line,
   return PARSE_SUCCESS;
 }
 
+/**
+ * @brief Parse HTTP headers section
+ * @param headers Headers string view
+ * @param request HttpRequest object to populate
+ * @return PARSE_SUCCESS on success, PARSE_ERROR on failure
+ */
 int HttpRequestParser::parseRequestHeaders(std::string_view headers,
                                            HttpRequest& request) {
   size_t header_counter = 0;
@@ -192,6 +213,12 @@ int HttpRequestParser::parseRequestHeaders(std::string_view headers,
   return PARSE_SUCCESS;
 }
 
+/**
+ * @brief Parse single HTTP header line
+ * @param header Header line string view
+ * @param request HttpRequest object to populate
+ * @return PARSE_SUCCESS on success, PARSE_ERROR on failure
+ */
 int HttpRequestParser::parseRequestHeaderLine(std::string_view header,
                                               HttpRequest& request) {
   size_t colon_pos = header.find(':');
@@ -223,6 +250,12 @@ int HttpRequestParser::parseRequestHeaderLine(std::string_view header,
   return PARSE_SUCCESS;
 }
 
+/**
+ * @brief Parse and validate HTTP message body
+ * @param body Body string view
+ * @param request HttpRequest object to populate
+ * @return PARSE_SUCCESS on success, PARSE_ERROR on failure
+ */
 int HttpRequestParser::parseRequestBody(std::string_view body,
                                         HttpRequest& request) {
   if (request.hasHeader("content-length")) {
@@ -235,8 +268,8 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
     }
 
     try {
-      size_t content_lenght = std::stoull(request.getHeader("content-length"));
-      request.setBodyLenght(content_lenght);
+      size_t content_length = std::stoull(request.getHeader("content-length"));
+      request.setBodyLength(content_length);
     } catch (const std::exception&) {
       request.setErrorStatus("Invalid Content-Length header value: " +
                                  request.getHeader("content-length"),
@@ -244,7 +277,7 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
       return PARSE_ERROR;
     }
 
-    if (request.getBodyLenght() >= MAX_REQUEST_BODY_SIZE) {
+    if (request.getBodyLength() >= MAX_REQUEST_BODY_SIZE) {
       request.setErrorStatus("Body size " + std::to_string(body.length()) +
                                  " exceeds maximum allowed size " +
                                  std::to_string(MAX_REQUEST_BODY_SIZE),
@@ -253,9 +286,9 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
     }
 
     // body.length() + 2 -> 2 bytes CRLF included in body lenght
-    if (request.getBodyLenght() != body.length() + 2) {
+    if (request.getBodyLength() != body.length() + 2) {
       request.setErrorStatus("Content-Length mismatch: expected " +
-                                 std::to_string(request.getBodyLenght()) +
+                                 std::to_string(request.getBodyLength()) +
                                  " bytes, got " +
                                  std::to_string(body.length()) + " bytes",
                              HttpRequestParserError::BAD_REQUEST);
@@ -264,7 +297,7 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
   } else {
     if (!body.empty() && request.getMethodCode() == HttpMethod::POST) {
       request.setErrorStatus("Content-Length header required",
-                             HttpRequestParserError::BODY_LENGHT_REQUARED);
+                             HttpRequestParserError::BODY_LENGTH_REQUIRED);
       return PARSE_ERROR;
     }
   }
@@ -272,6 +305,14 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
   return PARSE_SUCCESS;
 }
 
+// Validation
+
+/**
+ * @brief Validate request target URI format
+ * @param target Request target string
+ * @param request HttpRequest object for error reporting
+ * @return true if valid, false otherwise
+ */
 bool HttpRequestParser::validateRequestTarget(const std::string& target,
                                               HttpRequest& request) {
   std::string lower_target = toLowerCase(target);
@@ -302,14 +343,21 @@ bool HttpRequestParser::validateRequestTarget(const std::string& target,
   }
 
   if (scheme_end == std::string::npos && lower_target[0] != '/') {
-    request.setErrorStatus("Request target witout scheme shoul start with '/'",
-                           HttpRequestParserError::BAD_REQUEST);
+    request.setErrorStatus(
+        "Request target without scheme should start with '/'",
+        HttpRequestParserError::BAD_REQUEST);
     return false;
   }
 
   return true;
 }
 
+/**
+ * @brief Validate HTTP version format
+ * @param version HTTP version string
+ * @param request HttpRequest object for error reporting
+ * @return true if valid as common type, false otherwise
+ */
 bool HttpRequestParser::validateHttpVersion(const std::string& version,
                                             HttpRequest& request) {
   static const std::regex general_version_regex(R"(^HTTP/\d+\.\d+$)");
@@ -334,6 +382,11 @@ bool HttpRequestParser::validateHttpVersion(const std::string& version,
   return true;
 }
 
+/**
+ * @brief Validate header field name format
+ * @param field Header field name
+ * @return true if valid token characters, false otherwise
+ */
 bool HttpRequestParser::validateHeaderField(const std::string& field) {
   if (field.empty()) {
     return false;
@@ -347,6 +400,11 @@ bool HttpRequestParser::validateHeaderField(const std::string& field) {
   return true;
 }
 
+/**
+ * @brief Validate and trim header value
+ * @param value Header value to validate and trim (modified in place)
+ * @return true if valid after trimming, false otherwise
+ */
 bool HttpRequestParser::validateAndTrimHeaderValue(std::string& value) {
   size_t start = 0;
   size_t end = value.size();
@@ -358,7 +416,7 @@ bool HttpRequestParser::validateAndTrimHeaderValue(std::string& value) {
     --end;
   }
 
-  if (start == end) {
+  if (start >= end) {
     return false;
   }
 
@@ -369,10 +427,15 @@ bool HttpRequestParser::validateAndTrimHeaderValue(std::string& value) {
     }
   }
 
-  value = value.substr(start, end);
+  value = value.substr(start, end - start);
   return true;
 }
 
+/**
+ * @brief Validate single character as HTTP token character
+ * @param ch Character to validate
+ * @return true if valid token character per RFC 7230, false otherwise
+ */
 bool HttpRequestParser::validateTokenChar(char ch) {
   // RFC 7230 tchar definition
   return (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') ||

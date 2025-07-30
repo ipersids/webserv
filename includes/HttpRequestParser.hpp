@@ -2,7 +2,8 @@
  * @file HttpRequestParser.hpp
  * @brief HTTP Request parsing and handling class
  * @author Julia Persidskaia (ipersids)
- * @date 2025-07-25
+ * @date 2025-07-30
+ * @version 1.0
  *
  * Handles parsing and validation of incoming HTTP/1.1 requests.
  * Extracts method, URI, headers, and body from raw request data.
@@ -48,6 +49,7 @@
 #include <iostream>
 #include <memory>
 #include <regex>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -61,7 +63,7 @@
 
 enum HttpRequestParserError {
   BAD_REQUEST = 400,
-  BODY_LENGHT_REQUARED = 411,
+  BODY_LENGTH_REQUIRED = 411,
   METHOD_NOT_RECOGNIZED = 501,
   HTTP_VERSION_NOT_SUPPORTED = 505
 };

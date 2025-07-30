@@ -2,7 +2,8 @@
  * @file HttpRequest.hpp
  * @brief HTTP Request storage and representation class
  * @author Julia Persidskaia (ipersids)
- * @date 2025-07-28
+ * @date 2025-07-30
+ * @version 1.0
  *
  * This class represents an HTTP request as defined in RFC 7230.
  * It provides functionality to store and retrieve HTTP request components
@@ -60,7 +61,7 @@ class HttpRequest {
   void setHttpVersion(const std::string& http_version);
   void insertHeader(const std::string& field_name, std::string& value);
   void setBody(const std::string& body);
-  void setBodyLenght(size_t content_lenght);
+  void setBodyLength(size_t content_length);
   void setSuccessStatus(int status_code = 200);
   void setErrorStatus(const std::string& error_msg, int error_code);
 
@@ -71,7 +72,7 @@ class HttpRequest {
   const std::string& getHeader(const std::string& field_name) const;
   bool hasHeader(const std::string& field_name) const;
   const std::string& getBody(void) const;
-  size_t getBodyLenght(void) const;
+  size_t getBodyLength(void) const;
   const HttpRequestState& getStatus(void) const;
 
   bool isValid(void) const;
@@ -86,7 +87,7 @@ class HttpRequest {
   std::map<std::string, std::string> _headers;
   // Message Body https://datatracker.ietf.org/doc/html/rfc7230#autoid-26
   std::string _body;
-  size_t _body_lenght;
+  size_t _body_length;
   // Error managment
   HttpRequestState _status;
 };
