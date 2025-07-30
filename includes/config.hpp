@@ -14,6 +14,9 @@ struct LocationConfig {
     std::string                 index;
     std::vector<std::string>    allowed_methods;
     std::map<std::string, std::string> cgi_pass;
+    std::map<int, std::string>  error_pages;   
+    size_t                      client_max_body_size;
+    std::string                 redirect_url;
     // ... other location members
 };
 
@@ -29,7 +32,6 @@ struct ServerConfig {
 
 // The main container for the entire configuration
 struct Config {
-    std::stringstream buffer;
     std::vector<ServerConfig>   servers;
 };
 
@@ -41,3 +43,7 @@ private:
     //ConfigParser(const std::string& fileContent);
     //void runParser();
 };
+
+
+Config DummyConfig();
+void PrintConfig(const Config& config);

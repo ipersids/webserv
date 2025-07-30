@@ -6,9 +6,11 @@
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/18 13:48:38 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/07/18 14:51:40 by jrimpila         ###   ########.fr       */
+/*   Updated: 2025/07/26 11:43:03 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #pragma once
 
+constexpr int MaxEvents = 1024; 
+constexpr int timeout = 10000;
