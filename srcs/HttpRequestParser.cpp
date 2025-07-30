@@ -182,6 +182,13 @@ int HttpRequestParser::parseRequestHeaders(std::string_view headers,
     header_counter += 1;
   }
 
+  // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
+  if (!request.hasHeader("host")) {
+    request.setErrorStatus("Host header is missing",
+                           HttpRequestParserError::BAD_REQUEST);
+    return PARSE_ERROR;
+  }
+
   return PARSE_SUCCESS;
 }
 
@@ -218,6 +225,49 @@ int HttpRequestParser::parseRequestHeaderLine(std::string_view header,
 
 int HttpRequestParser::parseRequestBody(std::string_view body,
                                         HttpRequest& request) {
+  if (request.hasHeader("content-length")) {
+    if (request.hasHeader("transfer-encoding")) {
+      request.setErrorStatus(
+          "Malformed header - can't have both Content-Length and "
+          "Transfer-Encoding",
+          HttpRequestParserError::BAD_REQUEST);
+      return PARSE_ERROR;
+    }
+
+    try {
+      size_t content_lenght = std::stoull(request.getHeader("content-length"));
+      request.setBodyLenght(content_lenght);
+    } catch (const std::exception&) {
+      request.setErrorStatus("Invalid Content-Length header value: " +
+                                 request.getHeader("content-length"),
+                             HttpRequestParserError::BAD_REQUEST);
+      return PARSE_ERROR;
+    }
+
+    if (request.getBodyLenght() >= MAX_REQUEST_BODY_SIZE) {
+      request.setErrorStatus("Body size " + std::to_string(body.length()) +
+                                 " exceeds maximum allowed size " +
+                                 std::to_string(MAX_REQUEST_BODY_SIZE),
+                             HttpRequestParserError::BAD_REQUEST);
+      return PARSE_ERROR;
+    }
+
+    // body.length() + 2 -> 2 bytes CRLF included in body lenght
+    if (request.getBodyLenght() != body.length() + 2) {
+      request.setErrorStatus("Content-Length mismatch: expected " +
+                                 std::to_string(request.getBodyLenght()) +
+                                 " bytes, got " +
+                                 std::to_string(body.length()) + " bytes",
+                             HttpRequestParserError::BAD_REQUEST);
+      return PARSE_ERROR;
+    }
+  } else {
+    if (!body.empty() && request.getMethodCode() == HttpMethod::POST) {
+      request.setErrorStatus("Content-Length header required",
+                             HttpRequestParserError::BODY_LENGHT_REQUARED);
+      return PARSE_ERROR;
+    }
+  }
   request.setBody(std::string(body));
   return PARSE_SUCCESS;
 }

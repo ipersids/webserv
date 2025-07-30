@@ -17,6 +17,7 @@ HttpRequest::HttpRequest()
       _http_version(""),
       _headers(),
       _body(""),
+      _body_lenght(0),
       _status() {}
 
 HttpRequest::~HttpRequest() { _headers.clear(); }
@@ -79,6 +80,10 @@ void HttpRequest::setErrorStatus(const std::string& error_msg, int error_code) {
   _status.status_code = error_code;
 }
 
+void HttpRequest::setBodyLenght(size_t content_lenght) {
+  _body_lenght = content_lenght;
+}
+
 /** Getters */
 
 const std::string& HttpRequest::getMethod(void) const { return _method_raw; }
@@ -111,6 +116,8 @@ bool HttpRequest::hasHeader(const std::string& field_name) const {
 }
 
 const std::string& HttpRequest::getBody(void) const { return _body; }
+
+size_t HttpRequest::getBodyLenght(void) const { return _body_lenght; }
 
 const HttpRequestState& HttpRequest::getStatus(void) const { return _status; }
 

@@ -14,14 +14,13 @@
  * - Validate request format and completeness
  *
  * @todo Phase 1 (Essential - Core HTTP Parsing):
- * - Parse request line (method, URI, HTTP version)
- * - Header extraction and storage
- * - Basic request validation (malformed syntax)
- * - HTTP method validation (GET, POST, PUT, DELETE, HEAD)
- * - URI parsing and query parameter extraction
+ * ✓ Parse request line (method, URI, HTTP version)
+ * ✓ Header extraction and storage
+ * ✓ Basic request validation (malformed syntax)
  *
  * @todo Phase 2 (Body Handling):
- * - Content-Length validation and body reading
+ * ✓ Content-Length validation
+ * - Body reading
  * - POST data processing
  * - Content-Type header processing
  * - Request completeness checking
@@ -62,6 +61,7 @@
 
 enum HttpRequestParserError {
   BAD_REQUEST = 400,
+  BODY_LENGHT_REQUARED = 411,
   METHOD_NOT_RECOGNIZED = 501,
   HTTP_VERSION_NOT_SUPPORTED = 505
 };
@@ -78,6 +78,7 @@ class HttpRequestParser {
  private:
   static const size_t MAX_REQUEST_TARGET_LENGTH = 2048;
   static const size_t MAX_REQUEST_HEADERS_COUNT = 100;
+  static const size_t MAX_REQUEST_BODY_SIZE = 100 * 1024 * 1024;  // 100MB
 
  private:
   int parseRequestLine(std::string_view request_line, HttpRequest& request);
@@ -92,4 +93,4 @@ class HttpRequestParser {
   bool validateTokenChar(char ch);
 };
 
-#endif
+#endif  // _HTTP_REQUEST_PARSER_HPP
