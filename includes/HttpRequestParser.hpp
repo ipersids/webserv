@@ -55,7 +55,7 @@
 #include <vector>
 
 #include "HttpRequest.hpp"
-#include "HttpRequestUtils.hpp"
+#include "HttpUtils.hpp"
 
 // return values
 #define PARSE_SUCCESS 0

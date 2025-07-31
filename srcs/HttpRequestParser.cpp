@@ -308,7 +308,7 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
  */
 bool HttpRequestParser::validateRequestTarget(const std::string& target,
                                               HttpRequest& request) {
-  std::string lower_target = toLowerCase(target);
+  std::string lower_target = HttpUtils::toLowerCase(target);
   if (lower_target.length() > MAX_REQUEST_TARGET_LENGTH) {
     request.setErrorStatus("Request target too long: " + target,
                            HttpRequestParserError::BAD_REQUEST);

@@ -80,7 +80,7 @@ void HttpRequest::setHttpVersion(const std::string& http_version) {
  */
 void HttpRequest::insertHeader(const std::string& field_name,
                                std::string& value) {
-  std::string lowercase_name = toLowerCase(field_name);
+  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   auto it = _headers.find(lowercase_name);
   if (it != _headers.end()) {
     it->second += "," + value;
@@ -163,7 +163,7 @@ const std::string& HttpRequest::getHttpVersion(void) const {
  */
 const std::string& HttpRequest::getHeader(const std::string& field_name) const {
   static const std::string empty_string = "";
-  std::string lowercase_name = toLowerCase(field_name);
+  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   auto it = _headers.find(lowercase_name);
   if (it != _headers.end()) {
     return it->second;
@@ -177,7 +177,7 @@ const std::string& HttpRequest::getHeader(const std::string& field_name) const {
  * @return true if header exists, false otherwise
  */
 bool HttpRequest::hasHeader(const std::string& field_name) const {
-  std::string lowercase_name = toLowerCase(field_name);
+  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   return _headers.find(lowercase_name) != _headers.end();
 }
 

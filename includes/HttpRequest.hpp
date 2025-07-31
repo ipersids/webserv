@@ -22,7 +22,7 @@
 #include <map>
 #include <string>
 
-#include "HttpRequestUtils.hpp"
+#include "HttpUtils.hpp"
 
 // Common methods https://datatracker.ietf.org/doc/html/rfc7231#section-4
 // Registry: https://www.iana.org/assignments/http-methods/http-methods.xhtml

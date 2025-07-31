@@ -13,7 +13,7 @@ VPATH		:= $(SRC_DIRS)
 # Sources and objects
 SRCS		:= utils.cpp data.cpp ConfigParser.cpp \
 			HttpRequest.cpp \
-			HttpRequestUtils.cpp \
+			HttpUtils.cpp \
 			HttpRequestParser.cpp
 SRC_MAIN	:= main.cpp
 
