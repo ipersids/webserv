@@ -99,7 +99,7 @@ void HttpRequest::setBody(const std::string& body) { _body = body; }
  * @brief Set success status
  * @param status_code HTTP status code (optional, default = 200)
  */
-void HttpRequest::setSuccessStatus(int status_code) {
+void HttpRequest::setSuccessStatus(HttpUtils::HttpStatusCode status_code) {
   _status.result = HttpRequestResult::SUCCESS;
   _status.status_code = status_code;
 }
@@ -109,7 +109,8 @@ void HttpRequest::setSuccessStatus(int status_code) {
  * @param error_msg Error message
  * @param error_code HTTP error code
  */
-void HttpRequest::setErrorStatus(const std::string& error_msg, int error_code) {
+void HttpRequest::setErrorStatus(const std::string& error_msg,
+                                 HttpUtils::HttpStatusCode error_code) {
   _status.result = HttpRequestResult::ERROR;
   _status.message = error_msg;
   _status.status_code = error_code;
@@ -216,5 +217,6 @@ bool HttpRequest::isValid(void) const {
  * @param code Status code
  */
 HttpRequestState::HttpRequestState(HttpRequestResult res,
-                                   const std::string& msg, int code)
+                                   const std::string& msg,
+                                   HttpUtils::HttpStatusCode code)
     : result(res), message(msg), status_code(code) {}

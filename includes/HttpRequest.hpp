@@ -43,10 +43,12 @@ enum class HttpRequestResult { PROCESSING, SUCCESS, ERROR };
 struct HttpRequestState {
   HttpRequestResult result;
   std::string message;
-  int status_code;
+  HttpUtils::HttpStatusCode status_code;
 
-  HttpRequestState(HttpRequestResult res = HttpRequestResult::PROCESSING,
-                   const std::string& msg = "", int code = -1);
+  HttpRequestState(
+      HttpRequestResult res = HttpRequestResult::PROCESSING,
+      const std::string& msg = "",
+      HttpUtils::HttpStatusCode code = HttpUtils::HttpStatusCode::UKNOWN);
 };
 
 class HttpRequest {
@@ -62,8 +64,10 @@ class HttpRequest {
   void insertHeader(const std::string& field_name, std::string& value);
   void setBody(const std::string& body);
   void setBodyLength(size_t content_length);
-  void setSuccessStatus(int status_code = 200);
-  void setErrorStatus(const std::string& error_msg, int error_code);
+  void setSuccessStatus(
+      HttpUtils::HttpStatusCode status_code = HttpUtils::HttpStatusCode::OK);
+  void setErrorStatus(const std::string& error_msg,
+                      HttpUtils::HttpStatusCode error_code);
 
   const std::string& getMethod(void) const;
   const HttpMethod& getMethodCode(void) const;

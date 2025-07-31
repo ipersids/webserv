@@ -37,7 +37,7 @@ int HttpRequestParser::parseRequest(const std::string& raw_request,
                                     HttpRequest& request) {
   if (raw_request.empty()) {
     request.setErrorStatus("Empty request",
-                           HttpRequestParserError::BAD_REQUEST);
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -48,7 +48,7 @@ int HttpRequestParser::parseRequest(const std::string& raw_request,
   if (request_line_end == std::string_view::npos) {
     request.setErrorStatus(
         "HTTP messages MUST use \\r\\n (CRLF) as line terminators",
-        HttpRequestParserError::BAD_REQUEST);
+        HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -61,7 +61,7 @@ int HttpRequestParser::parseRequest(const std::string& raw_request,
   size_t headers_start = request_line_end + 2;
   if (headers_start >= message.length()) {
     request.setErrorStatus("Headers section should have at least Host field",
-                           HttpRequestParserError::BAD_REQUEST);
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -72,7 +72,7 @@ int HttpRequestParser::parseRequest(const std::string& raw_request,
     if (message.substr(message.length() - 2) != "\r\n") {
       request.setErrorStatus(
           "HTTP messages MUST use \\r\\n (CRLF) as line terminators",
-          HttpRequestParserError::BAD_REQUEST);
+          HttpUtils::HttpStatusCode::BAD_REQUEST);
       return PARSE_ERROR;
     }
     headers_end = message.length() - 2;
@@ -110,7 +110,7 @@ int HttpRequestParser::parseRequestLine(std::string_view request_line,
                                         HttpRequest& request) {
   if (request_line.empty()) {
     request.setErrorStatus("Empty request line",
-                           HttpRequestParserError::BAD_REQUEST);
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -118,7 +118,7 @@ int HttpRequestParser::parseRequestLine(std::string_view request_line,
   size_t method_end = request_line.find(' ');
   if (method_end == std::string_view::npos) {
     request.setErrorStatus("Malformed request line - missing spaces",
-                           HttpRequestParserError::BAD_REQUEST);
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -127,7 +127,7 @@ int HttpRequestParser::parseRequestLine(std::string_view request_line,
   size_t target_end = request_line.find(' ', target_start);
   if (target_end == std::string_view::npos) {
     request.setErrorStatus("Malformed request line - missing target",
-                           HttpRequestParserError::BAD_REQUEST);
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -145,7 +145,7 @@ int HttpRequestParser::parseRequestLine(std::string_view request_line,
   if (request.getMethodCode() == HttpMethod::UNKNOWN) {
     request.setErrorStatus(
         "Method is unrecognized or not implemented: " + method,
-        HttpRequestParserError::METHOD_NOT_RECOGNIZED);
+        HttpUtils::HttpStatusCode::NOT_IMPLEMENTED);
     return PARSE_ERROR;
   }
 
@@ -185,7 +185,7 @@ int HttpRequestParser::parseRequestHeaders(std::string_view headers,
       request.setErrorStatus(
           "Empty lines in header section are not allowed: line " +
               std::to_string(header_counter + 1),
-          HttpRequestParserError::BAD_REQUEST);
+          HttpUtils::HttpStatusCode::BAD_REQUEST);
       return PARSE_ERROR;
     }
 
@@ -199,7 +199,7 @@ int HttpRequestParser::parseRequestHeaders(std::string_view headers,
   // https://datatracker.ietf.org/doc/html/rfc7230#section-5.4
   if (!request.hasHeader("host")) {
     request.setErrorStatus("Host header is missing",
-                           HttpRequestParserError::BAD_REQUEST);
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -218,7 +218,7 @@ int HttpRequestParser::parseRequestHeaderLine(std::string_view header,
   if (colon_pos == std::string_view::npos) {
     request.setErrorStatus(
         "Malformed header - missing colon: " + std::string(header),
-        HttpRequestParserError::BAD_REQUEST);
+        HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -228,13 +228,13 @@ int HttpRequestParser::parseRequestHeaderLine(std::string_view header,
   if (!validateHeaderField(field_name)) {
     request.setErrorStatus(
         "Malformed header - invalid field name in line: " + std::string(header),
-        HttpRequestParserError::BAD_REQUEST);
+        HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
   if (!validateAndTrimHeaderValue(value)) {
     request.setErrorStatus(
         "Malformed header - invalid value in line: " + std::string(header),
-        HttpRequestParserError::BAD_REQUEST);
+        HttpUtils::HttpStatusCode::BAD_REQUEST);
     return PARSE_ERROR;
   }
 
@@ -256,7 +256,7 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
       request.setErrorStatus(
           "Malformed header - can't have both Content-Length and "
           "Transfer-Encoding",
-          HttpRequestParserError::BAD_REQUEST);
+          HttpUtils::HttpStatusCode::BAD_REQUEST);
       return PARSE_ERROR;
     }
 
@@ -266,7 +266,7 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
     } catch (const std::exception&) {
       request.setErrorStatus("Invalid Content-Length header value: " +
                                  request.getHeader("content-length"),
-                             HttpRequestParserError::BAD_REQUEST);
+                             HttpUtils::HttpStatusCode::BAD_REQUEST);
       return PARSE_ERROR;
     }
 
@@ -274,7 +274,7 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
       request.setErrorStatus("Body size " + std::to_string(body.length()) +
                                  " exceeds maximum allowed size " +
                                  std::to_string(MAX_REQUEST_BODY_SIZE),
-                             HttpRequestParserError::BAD_REQUEST);
+                             HttpUtils::HttpStatusCode::BAD_REQUEST);
       return PARSE_ERROR;
     }
 
@@ -284,13 +284,13 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
                                  std::to_string(request.getBodyLength()) +
                                  " bytes, got " +
                                  std::to_string(body.length()) + " bytes",
-                             HttpRequestParserError::BAD_REQUEST);
+                             HttpUtils::HttpStatusCode::BAD_REQUEST);
       return PARSE_ERROR;
     }
   } else {
     if (!body.empty() && request.getMethodCode() == HttpMethod::POST) {
       request.setErrorStatus("Content-Length header required",
-                             HttpRequestParserError::BODY_LENGTH_REQUIRED);
+                             HttpUtils::HttpStatusCode::LENGTH_REQUIRED);
       return PARSE_ERROR;
     }
   }
@@ -311,7 +311,7 @@ bool HttpRequestParser::validateRequestTarget(const std::string& target,
   std::string lower_target = HttpUtils::toLowerCase(target);
   if (lower_target.length() > MAX_REQUEST_TARGET_LENGTH) {
     request.setErrorStatus("Request target too long: " + target,
-                           HttpRequestParserError::BAD_REQUEST);
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
     return false;
   }
 
@@ -320,7 +320,7 @@ bool HttpRequestParser::validateRequestTarget(const std::string& target,
         ch == '\\') {
       request.setErrorStatus(
           "Request target contains forbidden character: " + ch,
-          HttpRequestParserError::BAD_REQUEST);
+          HttpUtils::HttpStatusCode::BAD_REQUEST);
       return false;
     }
   }
@@ -330,7 +330,7 @@ bool HttpRequestParser::validateRequestTarget(const std::string& target,
     std::string scheme = lower_target.substr(0, scheme_end);
     if (scheme != "http" && scheme != "https") {
       request.setErrorStatus("Only http/https schemes allowed: " + scheme,
-                             HttpRequestParserError::BAD_REQUEST);
+                             HttpUtils::HttpStatusCode::BAD_REQUEST);
       return false;
     }
   }
@@ -338,7 +338,7 @@ bool HttpRequestParser::validateRequestTarget(const std::string& target,
   if (scheme_end == std::string::npos && lower_target[0] != '/') {
     request.setErrorStatus(
         "Request target without scheme should start with '/'",
-        HttpRequestParserError::BAD_REQUEST);
+        HttpUtils::HttpStatusCode::BAD_REQUEST);
     return false;
   }
 
@@ -362,13 +362,13 @@ bool HttpRequestParser::validateHttpVersion(const std::string& version,
   if (is_valid && !is_supported) {
     request.setErrorStatus(
         "Valid format but unsupported HTTP version: " + version,
-        HttpRequestParserError::HTTP_VERSION_NOT_SUPPORTED);
+        HttpUtils::HttpStatusCode::HTTP_VERSION_NOT_SUPPORTED);
     return false;
   }
 
   if (!is_valid) {
     request.setErrorStatus("Invalid HTTP version format: " + version,
-                           HttpRequestParserError::BAD_REQUEST);
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
     return false;
   }
 
