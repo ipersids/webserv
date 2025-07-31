@@ -17,6 +17,8 @@
 #include <algorithm>
 #include <string>
 
+#define CRLF_LENGTH 2
+
 namespace HttpUtils {
 
 // Response Status Codes:
@@ -59,6 +61,8 @@ enum class HttpStatusCode {
   UNSUPPORTED_MEDIA_TYPE = 415,
   RANGE_NOT_SATISFIABLE = 416,
   EXPECTATION_FAILED = 417,
+  // https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/418
+  I_AM_TEAPOD = 418,
   TOO_MANY_REQUESTS = 429,
   // Server Error 5xx
   INTERNAL_SERVER_ERROR = 500,

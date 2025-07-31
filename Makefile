@@ -14,7 +14,8 @@ VPATH		:= $(SRC_DIRS)
 SRCS		:= utils.cpp data.cpp ConfigParser.cpp \
 			HttpRequest.cpp \
 			HttpUtils.cpp \
-			HttpRequestParser.cpp
+			HttpRequestParser.cpp \
+			HttpResponse.cpp
 SRC_MAIN	:= main.cpp
 
 OBJS		:= $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
