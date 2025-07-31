@@ -73,7 +73,7 @@ void HttpRequest::setHttpVersion(const std::string& http_version) {
  * @brief Insert header field (case-insensitive)
  *
  * Handles duplicates by adding the value to the existing one, separated by a
- * comma `, `
+ * comma `,`
  *
  * @param field_name Header field name
  * @param value Header field value
@@ -83,7 +83,7 @@ void HttpRequest::insertHeader(const std::string& field_name,
   std::string lowercase_name = toLowerCase(field_name);
   auto it = _headers.find(lowercase_name);
   if (it != _headers.end()) {
-    it->second += ", " + value;
+    it->second += "," + value;
   } else {
     _headers.insert({lowercase_name, value});
   }
