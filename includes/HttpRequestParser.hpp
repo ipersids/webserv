@@ -79,7 +79,6 @@ class HttpRequestParser {
 
  private:
   static const size_t MAX_REQUEST_TARGET_LENGTH = 2048;
-  static const size_t MAX_REQUEST_HEADERS_COUNT = 100;
   static const size_t MAX_REQUEST_BODY_SIZE = 100 * 1024 * 1024;  // 100MB
 
  private:

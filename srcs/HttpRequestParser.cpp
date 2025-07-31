@@ -176,13 +176,6 @@ int HttpRequestParser::parseRequestHeaders(std::string_view headers,
   size_t start_pos = 0;
 
   while (start_pos < headers.size()) {
-    if (header_counter >= MAX_REQUEST_HEADERS_COUNT) {
-      request.setErrorStatus(
-          "Amount of headers exceeded limit: " + std::to_string(header_counter),
-          HttpRequestParserError::BAD_REQUEST);
-      return PARSE_ERROR;
-    }
-
     size_t end_pos = headers.find("\r\n", start_pos);
     std::string_view header_line =
         headers.substr(start_pos, end_pos - start_pos);
