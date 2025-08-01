@@ -73,17 +73,17 @@ void HttpRequest::setHttpVersion(const std::string& http_version) {
  * @brief Insert header field (case-insensitive)
  *
  * Handles duplicates by adding the value to the existing one, separated by a
- * comma `, `
+ * comma `,`
  *
  * @param field_name Header field name
  * @param value Header field value
  */
 void HttpRequest::insertHeader(const std::string& field_name,
                                std::string& value) {
-  std::string lowercase_name = toLowerCase(field_name);
+  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   auto it = _headers.find(lowercase_name);
   if (it != _headers.end()) {
-    it->second += ", " + value;
+    it->second += "," + value;
   } else {
     _headers.insert({lowercase_name, value});
   }
@@ -99,7 +99,7 @@ void HttpRequest::setBody(const std::string& body) { _body = body; }
  * @brief Set success status
  * @param status_code HTTP status code (optional, default = 200)
  */
-void HttpRequest::setSuccessStatus(int status_code) {
+void HttpRequest::setSuccessStatus(HttpUtils::HttpStatusCode status_code) {
   _status.result = HttpRequestResult::SUCCESS;
   _status.status_code = status_code;
 }
@@ -109,7 +109,8 @@ void HttpRequest::setSuccessStatus(int status_code) {
  * @param error_msg Error message
  * @param error_code HTTP error code
  */
-void HttpRequest::setErrorStatus(const std::string& error_msg, int error_code) {
+void HttpRequest::setErrorStatus(const std::string& error_msg,
+                                 HttpUtils::HttpStatusCode error_code) {
   _status.result = HttpRequestResult::ERROR;
   _status.message = error_msg;
   _status.status_code = error_code;
@@ -163,7 +164,7 @@ const std::string& HttpRequest::getHttpVersion(void) const {
  */
 const std::string& HttpRequest::getHeader(const std::string& field_name) const {
   static const std::string empty_string = "";
-  std::string lowercase_name = toLowerCase(field_name);
+  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   auto it = _headers.find(lowercase_name);
   if (it != _headers.end()) {
     return it->second;
@@ -177,7 +178,7 @@ const std::string& HttpRequest::getHeader(const std::string& field_name) const {
  * @return true if header exists, false otherwise
  */
 bool HttpRequest::hasHeader(const std::string& field_name) const {
-  std::string lowercase_name = toLowerCase(field_name);
+  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   return _headers.find(lowercase_name) != _headers.end();
 }
 
@@ -216,5 +217,6 @@ bool HttpRequest::isValid(void) const {
  * @param code Status code
  */
 HttpRequestState::HttpRequestState(HttpRequestResult res,
-                                   const std::string& msg, int code)
+                                   const std::string& msg,
+                                   HttpUtils::HttpStatusCode code)
     : result(res), message(msg), status_code(code) {}

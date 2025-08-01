@@ -55,18 +55,18 @@
 #include <vector>
 
 #include "HttpRequest.hpp"
-#include "HttpRequestUtils.hpp"
+#include "HttpUtils.hpp"
 
 // return values
 #define PARSE_SUCCESS 0
 #define PARSE_ERROR 128
 
-enum HttpRequestParserError {
-  BAD_REQUEST = 400,
-  BODY_LENGTH_REQUIRED = 411,
-  METHOD_NOT_RECOGNIZED = 501,
-  HTTP_VERSION_NOT_SUPPORTED = 505
-};
+// enum HttpRequestParserError {
+//   BAD_REQUEST = 400,
+//   BODY_LENGTH_REQUIRED = 411,
+//   METHOD_NOT_RECOGNIZED = 501,
+//   HTTP_VERSION_NOT_SUPPORTED = 505
+// };
 
 class HttpRequestParser {
  public:
@@ -79,7 +79,6 @@ class HttpRequestParser {
 
  private:
   static const size_t MAX_REQUEST_TARGET_LENGTH = 2048;
-  static const size_t MAX_REQUEST_HEADERS_COUNT = 100;
   static const size_t MAX_REQUEST_BODY_SIZE = 100 * 1024 * 1024;  // 100MB
 
  private:

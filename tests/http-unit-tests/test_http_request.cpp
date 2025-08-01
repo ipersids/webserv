@@ -162,10 +162,10 @@ static void test_request_with_header_duplicates() {
   request.insertHeader("X-Test", value_2);
 
   assert(request.hasHeader("X-Test"));
-  assert(request.getHeader("X-Test") == "value1, value2");
+  assert(request.getHeader("X-Test") == "value1,value2");
 
   request.insertHeader("x-test", value_3);
-  assert(request.getHeader("X-Test") == "value1, value2, value3");
+  assert(request.getHeader("X-Test") == "value1,value2,value3");
 
   std::cout << "\t✓ passed" << std::endl;
 }
