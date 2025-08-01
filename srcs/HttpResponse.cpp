@@ -14,6 +14,7 @@ HttpResponse::HttpResponse(const HttpUtils::HttpStatusCode& code,
   }
   if (code == HttpUtils::HttpStatusCode::UKNOWN) {
     setStatusCode(HttpUtils::HttpStatusCode::I_AM_TEAPOD);
+    _reason_phrase = whatReasonPhrase(_status_code);
   }
   size_t content_length = _body.length() + CRLF_LENGTH;
   insertHeader("Content-Length", std::to_string(content_length));

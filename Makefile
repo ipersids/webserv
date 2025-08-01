@@ -58,7 +58,8 @@ LIB_NAME		:= libwebserv.a
 TEST_NAME		:= test.out
 TEST_SRCS		:= tests/test_main.cpp \
 				tests/http-unit-tests/test_http_request.cpp \
-				tests/http-unit-tests/test_http_request_parser.cpp
+				tests/http-unit-tests/test_http_request_parser.cpp \
+				tests/http-unit-tests/test_http_response.cpp
 TEST_SRCS_WITH_PATHS	:= $(addprefix srcs/, $(SRCS)) $(TEST_SRCS)
 
 test: $(OBJ_DIR) $(LIB_NAME)
