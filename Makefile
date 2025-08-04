@@ -11,7 +11,7 @@ SRC_DIRS	:= srcs srcs/Config
 VPATH		:= $(SRC_DIRS)
 
 # Sources and objects
-SRCS		:= utils.cpp data.cpp ConfigParser.cpp \
+SRCS		:= utils.cpp data.cpp ConfigParser.cpp Parser.cpp Tokenizer.cpp \
 			HttpRequest.cpp \
 			HttpUtils.cpp \
 			HttpRequestParser.cpp \
