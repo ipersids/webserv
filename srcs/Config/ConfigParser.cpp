@@ -1,21 +1,29 @@
 #include "../../includes/config.hpp"
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <filesystem>
 #include <stdexcept>
-#include <iostream>
-#include <cctype>
 #include <vector>
-
 
 namespace ConfigParser {
 
-// Throws a runtime error with consistent formatting
+/**
+ * @brief Constructor to initialize a location with inherited settings.
+ * @param parent The parent ServerConfig to inherit from.
+ */    
+LocationConfig::LocationConfig(const ServerConfig& parent) :
+    root(parent.root),
+    index(parent.index),
+    client_max_body_size(parent.client_max_body_size),
+    cgi_pass(parent.cgi_pass),
+    error_pages(parent.error_pages)
+{}
+
 void throwError(const std::string& message) {
     throw std::runtime_error("[Config Error] " + message);
 }
 
-// Checks if file has a valid configuration extension
 bool hasValidExtension(const std::string& filePath) {
     const std::vector<std::string> validExtensions = {".conf", ".cfg", ".config"};
     for (const auto& ext : validExtensions) {
@@ -27,7 +35,6 @@ bool hasValidExtension(const std::string& filePath) {
     return false;
 }
 
-// Checks if file exists but is empty or contains only whitespace
 bool isEmptyFile(const std::string& filePath) {
     std::ifstream file(filePath);
     if (!file.is_open()) return true;
@@ -39,7 +46,11 @@ bool isEmptyFile(const std::string& filePath) {
     return content.find_first_not_of(" \t\r\n") == std::string::npos;
 }
 
-// Validates file existence, type, extension, and content
+/**
+ * @brief Performs all pre-checks on a configuration file.
+ * @param filePath The path to the configuration file.
+ * @throws std::runtime_error If any validation check fails.
+ */
 void validateFile(const std::string& filePath) {
     if (!std::filesystem::exists(filePath)) {
         throwError("File does not exist: " + filePath);
@@ -55,58 +66,56 @@ void validateFile(const std::string& filePath) {
     }
 }
 
-static void printTokens(const std::vector<Token>& tokens) {
-    std::cout << "\n=== TOKENS (" << tokens.size() << " total) ===" << std::endl;
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        const Token& token = tokens[i];
-        std::string typeStr;
+// static void printTokens(const std::vector<Token>& tokens) {
+//     std::cout << "\n=== TOKENS (" << tokens.size() << " total) ===" << std::endl;
+//     for (size_t i = 0; i < tokens.size(); ++i) {
+//         const Token& token = tokens[i];
+//         std::string typeStr;
         
-        switch (token.type) {
-            case TokenType::KEYWORD:     typeStr = "KEYWORD"; break;
-            case TokenType::VALUE:       typeStr = "VALUE"; break;
-            case TokenType::OPEN_BRACE:  typeStr = "OPEN_BRACE"; break;
-            case TokenType::CLOSE_BRACE: typeStr = "CLOSE_BRACE"; break;
-            case TokenType::SEMICOLON:   typeStr = "SEMICOLON"; break;
-            case TokenType::END_OF_FILE: typeStr = "END_OF_FILE"; break;
-            default:                     typeStr = "UNKNOWN"; break;
-        }
+//         switch (token.type) {
+//             case TokenType::KEYWORD:     typeStr = "KEYWORD"; break;
+//             case TokenType::VALUE:       typeStr = "VALUE"; break;
+//             case TokenType::OPEN_BRACE:  typeStr = "OPEN_BRACE"; break;
+//             case TokenType::CLOSE_BRACE: typeStr = "CLOSE_BRACE"; break;
+//             case TokenType::SEMICOLON:   typeStr = "SEMICOLON"; break;
+//             case TokenType::END_OF_FILE: typeStr = "END_OF_FILE"; break;
+//             default:                     typeStr = "UNKNOWN"; break;
+//         }
         
-        std::cout << "[" << i << "] " 
-                  << typeStr << " "
-                  << "\"" << token.value << "\" "
-                  << "(line " << token.line << ")"
-                  << std::endl;
-    }
-    std::cout << "=== END TOKENS ===" << std::endl << std::endl;
-}
+//         std::cout << "[" << i << "] " 
+//                   << typeStr << " "
+//                   << "\"" << token.value << "\" "
+//                   << "(line " << token.line << ")"
+//                   << std::endl;
+//     }
+//     std::cout << "=== END TOKENS ===" << std::endl << std::endl;
+// }
 
-
-// Main public interface: reads file and returns complete parsed Config object
+/**
+ * @brief Main entry point to parse a configuration file.
+ * @param filePath The path to the configuration file.
+ * @return A populated Config object representing the file's contents.
+ * @throws std::runtime_error On file errors or fatal parsing errors.
+ */
 Config parse(const std::string& filePath) {
-    // 1. File validation
     validateFile(filePath);
     std::cout << "File validation passed: " << filePath << std::endl;
-    
-    // 2. Read file content
     std::ifstream file(filePath);
     if (!file.is_open()) {
         throwError("Failed to open file: " + filePath);
     }
-    
     std::stringstream buffer;
     buffer << file.rdbuf();
+
     const std::string content = buffer.str();
-
-    // 3. Tokenization: Convert raw text to tokens
     std::cout << "Tokenizing config file: " << filePath << std::endl;
-    auto tokens = Tokenizer::tokenize(content);
-    Tokenizer::classifyTokens(tokens);
+    auto tokens = detail::Tokenizer::tokenize(content);
+    detail::Tokenizer::classifyTokens(tokens);
 
-    // 4. Parsing: Build config structure from tokens
     std::cout << "Parsing config file: " << filePath << std::endl;
-    printTokens(tokens);
+    //printTokens(tokens);
     Config config;
-    //config = Parser::parseTokens(tokens);
+    config = detail::Parser::parseTokens(tokens);
     config.config_path = filePath;
     
     std::cout << "Config parsed successfully from: " << filePath << std::endl;
@@ -115,97 +124,7 @@ Config parse(const std::string& filePath) {
 
 } // namespace ConfigParser
 
-
-namespace Tokenizer {
-
-// Throws a runtime error with consistent formatting and optional line number
-void throwError(const std::string& message, size_t line = 0) {
-    std::string error = "[Tokenizer Error] ";
-    if (line > 0) {
-        error += "on line " + std::to_string(line) + ": ";
-    }
-    throw std::runtime_error(error + message);
-}
-
-// Single-pass tokenizer that correctly handles strings, comments, and special characters
-std::vector<Token> tokenize(const std::string& content) {
-    std::vector<Token> tokens;
-    size_t line = 1;
-
-    for (size_t i = 0; i < content.length(); ++i) {
-        if (content[i] == '\n') {
-            line++;
-        } else if (std::isspace(content[i])) {
-            continue; // Skip whitespace
-        } else if (content[i] == '#') {
-            // Skip comments until end of line
-            while (i < content.length() && content[i] != '\n') {
-                i++;
-            }
-            if (i < content.length() && content[i] == '\n') line++;
-        } else if (content[i] == '{') {
-            tokens.push_back({TokenType::OPEN_BRACE, "{", line});
-        } else if (content[i] == '}') {
-            tokens.push_back({TokenType::CLOSE_BRACE, "}", line});
-        } else if (content[i] == ';') {
-            tokens.push_back({TokenType::SEMICOLON, ";", line});
-        } else { // Keyword or Value
-            std::string value;
-            if (content[i] == '"' || content[i] == '\'') {
-                // Handle quoted strings with proper escape sequence support
-                char quote_char = content[i];
-                i++; // Skip opening quote
-                while (i < content.length() && content[i] != quote_char) {
-                    if (content[i] == '\\' && i + 1 < content.length()) { // Handle escape character
-                        value += content[++i];
-                    } else {
-                        value += content[i];
-                    }
-                    i++;
-                }
-                if (i >= content.length() || content[i] != quote_char) {
-                    throwError("Unterminated string literal", line);
-                }
-            } else {
-                // Handle unquoted tokens (stop at whitespace or special chars)
-                while (i < content.length() && !std::isspace(content[i]) &&
-                       std::string("{};#").find(content[i]) == std::string::npos) {
-                    value += content[i++];
-                }
-                i--; // Decrement to account for the loop's ++
-            }
-            // The parser will determine if it's a KEYWORD or VALUE based on context
-            tokens.push_back({TokenType::UNKNOWN, value, line});
-        }
-    }
-    tokens.push_back({TokenType::END_OF_FILE, "EOF", line});
-    return tokens;
-}
-
-// Determines token types based on context using simple positional heuristics
-void classifyTokens(std::vector<Token>& tokens) {
-    for (size_t i = 0; i < tokens.size(); ++i) {
-        if (tokens[i].type == TokenType::UNKNOWN) {
-            // A token is a KEYWORD if it's the first in a statement 
-            // (i.e., after a ';' or '{' or '}' or at the start)
-            if (i == 0 || tokens[i-1].type == TokenType::SEMICOLON ||
-                tokens[i-1].type == TokenType::OPEN_BRACE || tokens[i-1].type == TokenType::CLOSE_BRACE) {
-                tokens[i].type = TokenType::KEYWORD;
-            } else {
-                tokens[i].type = TokenType::VALUE;
-            }
-        }
-    }
-}
-
-} // namespace Tokenizer
-
-
-
-
-// Output stream operators for clean config printing
-
-std::ostream& operator<<(std::ostream& os, const LocationConfig& location) {
+std::ostream& operator<<(std::ostream& os, const ConfigParser::LocationConfig& location) {
     os << "      Location: " << location.path << "\n";
     os << "        Root: " << (location.root.empty() ? "(inherited)" : location.root) << "\n";
     os << "        Index: " << (location.index.empty() ? "(inherited)" : location.index) << "\n";
@@ -242,7 +161,7 @@ std::ostream& operator<<(std::ostream& os, const LocationConfig& location) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const ServerConfig& server) {
+std::ostream& operator<<(std::ostream& os, const ConfigParser::ServerConfig& server) {
     os << "  Server Configuration:\n";
     os << "    Host: " << server.host << "\n";
     os << "    Port: " << server.port << "\n";
@@ -276,7 +195,7 @@ std::ostream& operator<<(std::ostream& os, const ServerConfig& server) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream& os, const Config& config) {
+std::ostream& operator<<(std::ostream& os, const ConfigParser::Config& config) {
     os << "=== Configuration Summary ===\n";
     os << "Config File: " << config.config_path << "\n";
     os << "Servers: " << config.servers.size() << "\n\n";
