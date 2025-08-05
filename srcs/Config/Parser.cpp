@@ -112,7 +112,7 @@ bool isValidDirective(const std::string& directive) {
 bool isValidInServerContext(const std::string& directive) {
     static const std::unordered_set<std::string> valid = {
         "listen", "server_name", "host", "root", "index", "error_page",
-        "client_max_body_size", "cgi_path"
+        "client_max_body_size", "cgi_path", "port"
     };
     return valid.count(directive);
 }
@@ -124,7 +124,7 @@ bool isValidInServerContext(const std::string& directive) {
  */
 bool isValidInLocationContext(const std::string& directive) {
     static const std::unordered_set<std::string> valid = {
-        "root", "index", "autoindex", "allow_methods", "return",
+        "root", "index", "autoindex", "allow_methods", "methods", "return",
         "cgi_path", "cgi_ext", "error_page", "client_max_body_size"
     };
     return valid.count(directive);
@@ -181,7 +181,7 @@ void parseServerDirective(ConfigParser::ServerConfig& server, const std::vector<
     std::vector<std::string> values = getDirectiveValues(keyword.value, keyword.line, tokens, pos);
     
     // Populate ServerConfig based on the directive
-    if (keyword.value == "listen" && !values.empty()) {
+    if ((keyword.value == "listen" && !values.empty()) || (keyword.value == "port" && !values.empty())) {
         try { 
             server.port = std::stoi(values[0]);
             validatePort(server.port);
@@ -247,7 +247,7 @@ void parseLocationDirective(ConfigParser::LocationConfig& location, const std::v
         location.index = values[0];
     } else if (keyword.value == "autoindex" && !values.empty()) {
         location.autoindex = (values[0] == "on" || values[0] == "true");
-    } else if (keyword.value == "allow_methods") {
+    } else if (keyword.value == "allow_methods" || keyword.value == "methods") {
         location.allowed_methods = values;
     } else if (keyword.value == "return" && !values.empty()) {
         location.redirect_url = values[0];
