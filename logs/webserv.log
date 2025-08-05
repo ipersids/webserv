@@ -1,0 +1,12 @@
+[INFO] 2025-08-05 11:37:04: --- Logger Initialized ---
+[INFO] 2025-08-05 11:37:04: Configuration parsed successfully from: tests/test.conf
+[INFO] 2025-08-05 11:38:32: --- Logger Initialized ---
+[INFO] 2025-08-05 11:38:32: Configuration parsed successfully from: tests/test.conf
+[INFO] 2025-08-05 11:38:47: --- Logger Initialized ---
+[ERROR] 2025-08-05 11:38:47: A fatal error occurred: [Parser Error] on line 32: Expected a directive keyword
+[INFO] 2025-08-05 11:38:47: --- Logger Shutdown ---
+[INFO] 2025-08-05 11:39:24: --- Logger Initialized ---
+[ERROR] 2025-08-05 11:39:24: A fatal error occurred: [Parser Error] on line 26: Expected a directive keyword
+[INFO] 2025-08-05 11:39:24: --- Logger Shutdown ---
+[INFO] 2025-08-05 11:39:36: --- Logger Initialized ---
+[INFO] 2025-08-05 11:39:36: Configuration parsed successfully from: tests/test.conf

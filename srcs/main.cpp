@@ -21,24 +21,32 @@ int handle_events(int nfds, epoll_event events[]){
 	return 0;
 }
 
-void parse(int argc, char *argv[])
-{
-	(void) argc;
-	(void) argv;
-}
 
 int main(int argc, char *argv[])
 {
 
 	Data &data = Data::getData();
 
-	try {
-		parse(argc, argv);
-	}
-	catch (const std::exception& e) {
-    	std::cerr << "Exception caught: " << e.what() << std::endl;
-		return -1;
-	}
+    try {
+        Logger::init("logs/webserv.log");
+    } catch (const std::exception& e) {
+        std::cerr << "Fatal Error: Failed to initialize logger: " << e.what() << std::endl;
+        return 1;
+    }
+
+    ConfigParser::Config config;
+    try {
+        if (argc != 2) {
+            throw std::runtime_error("Usage: ./webserv [path_to_config_file]");
+        }
+        config = ConfigParser::parse(argv[1]);
+        Logger::info("Configuration parsed successfully from: " + config.config_path);
+        std::cout << config << std::endl;
+    } catch (const std::exception& e) {
+        Logger::error("A fatal error occurred: " + std::string(e.what()));
+        Logger::shutdown();
+        return 1;
+    }
 	
 	int server_fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (server_fd == -1)
@@ -97,6 +105,7 @@ int main(int argc, char *argv[])
 		}
 		handle_events(nfds, events);
 	}
+	Logger::shutdown();
 }
 
 

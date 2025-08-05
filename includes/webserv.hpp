@@ -26,8 +26,9 @@
 
 #include "macros.hpp"
 #include "data.hpp"
+#include "Logger.hpp"
+#include "config.hpp"
 
 //parsing 
 
-void parse(int argc, char *argv[]);
 int throwError(const char *str);
