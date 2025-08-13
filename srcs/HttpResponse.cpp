@@ -35,6 +35,7 @@ void HttpResponse::setStatusCode(const HttpUtils::HttpStatusCode& code) {
   } else {
     _status_code = code;
   }
+  _reason_phrase = whatReasonPhrase(_status_code);
 }
 
 void HttpResponse::insertHeader(const std::string& field_name,
@@ -50,9 +51,16 @@ void HttpResponse::insertHeader(const std::string& field_name,
 
 void HttpResponse::setBody(const std::string& body) {
   _body = body;
-  size_t content_length = _body.length() + CRLF_LENGTH;
+  size_t content_length = _body.length();
   removeHeader("Content-Length");
   insertHeader("Content-Length", std::to_string(content_length));
+}
+
+void HttpResponse::setErrorResponse(const HttpUtils::HttpStatusCode& code,
+                                    const std::string& msg) {
+  setStatusCode(code);
+  setBody(msg);
+  _reason_phrase = getReasonPhrase();
 }
 
 // Getters

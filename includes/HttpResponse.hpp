@@ -44,6 +44,9 @@ class HttpResponse {
   void insertHeader(const std::string& field_name, const std::string& value);
   void setBody(const std::string& body);
 
+  void setErrorResponse(const HttpUtils::HttpStatusCode& code,
+                        const std::string& msg);
+
   const std::string& getHttpVersion(void) const;
   const HttpUtils::HttpStatusCode& getStatusCode(void) const;
   const std::string& getReasonPhrase(void) const;

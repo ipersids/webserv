@@ -61,13 +61,6 @@
 #define PARSE_SUCCESS 0
 #define PARSE_ERROR 128
 
-// enum HttpRequestParserError {
-//   BAD_REQUEST = 400,
-//   BODY_LENGTH_REQUIRED = 411,
-//   METHOD_NOT_RECOGNIZED = 501,
-//   HTTP_VERSION_NOT_SUPPORTED = 505
-// };
-
 class HttpRequestParser {
  public:
   HttpRequestParser();

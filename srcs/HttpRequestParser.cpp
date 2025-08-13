@@ -278,8 +278,7 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
       return PARSE_ERROR;
     }
 
-    // body.length() + 2 -> 2 bytes CRLF included in body lenght
-    if (request.getBodyLength() != body.length() + 2) {
+    if (request.getBodyLength() != body.length()) {
       request.setErrorStatus("Content-Length mismatch: expected " +
                                  std::to_string(request.getBodyLength()) +
                                  " bytes, got " +

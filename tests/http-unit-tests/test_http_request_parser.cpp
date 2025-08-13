@@ -52,7 +52,7 @@ static void test_post_request_with_body() {
       "POST /api/users HTTP/1.1\r\n"
       "Host: api.example.com\r\n"
       "Content-Type: application/json\r\n"
-      "Content-Length: 26\r\n"
+      "Content-Length: 24\r\n"
       "\r\n"
       "{\"name\":\"John\",\"age\":30}";
 
@@ -67,7 +67,7 @@ static void test_post_request_with_body() {
   assert(request.hasHeader("content-type"));
   assert(request.getHeader("content-type") == "application/json");
   assert(request.hasHeader("content-length"));
-  assert(request.getHeader("content-length") == "26");
+  assert(request.getHeader("content-length") == "24");
   assert(request.getBody() == "{\"name\":\"John\",\"age\":30}");
 
   std::cout << "\t✓ passed" << std::endl;
