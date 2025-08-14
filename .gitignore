@@ -35,6 +35,7 @@ webserv
 
 # temporary directories
 obj/*
+logs/*
 
 # VS Compiled
 .vscode/*

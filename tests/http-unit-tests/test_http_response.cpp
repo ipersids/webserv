@@ -152,8 +152,7 @@ TEST(set_body) {
   ASSERT_EQ(test_body, response.getBody());
   // Content-Length should be updated automatically
   std::string content_length = response.getHeader("Content-Length");
-  ASSERT_EQ(std::to_string(test_body.length() + 2),
-            content_length);  // +2 for CRLF
+  ASSERT_EQ(std::to_string(test_body.length()), content_length);
 }
 
 TEST(get_header_nonexistent) {
@@ -252,16 +251,16 @@ TEST(content_length_calculation) {
 
   // Test empty body
   response.setBody("");
-  ASSERT_EQ("2", response.getHeader("Content-Length"));  // CRLF_LENGTH = 2
+  ASSERT_EQ("0", response.getHeader("Content-Length"));
 
   // Test short body
   response.setBody("Hi");
-  ASSERT_EQ("4", response.getHeader("Content-Length"));  // 2 + 2
+  ASSERT_EQ("2", response.getHeader("Content-Length"));
 
   // Test longer body
   std::string long_body(1000, 'x');
   response.setBody(long_body);
-  ASSERT_EQ("1002", response.getHeader("Content-Length"));  // 1000 + 2
+  ASSERT_EQ("1000", response.getHeader("Content-Length"));
 }
 
 TEST(header_overwriting) {
