@@ -47,6 +47,8 @@ class HttpResponse {
   void setErrorResponse(const HttpUtils::HttpStatusCode& code,
                         const std::string& msg);
 
+  void removeHeader(const std::string& field_name);
+
   const std::string& getHttpVersion(void) const;
   const HttpUtils::HttpStatusCode& getStatusCode(void) const;
   const std::string& getReasonPhrase(void) const;
@@ -70,7 +72,6 @@ class HttpResponse {
  private:
   std::string whatReasonPhrase(const HttpUtils::HttpStatusCode& code);
   std::string capitalizeHeaderFieldName(const std::string& field_name);
-  void removeHeader(const std::string& field_name);
 };
 
 #endif  // _HTTP_RESPONSE_HPP

@@ -8,16 +8,20 @@ HttpResponse::HttpResponse(const HttpUtils::HttpStatusCode& code,
       _headers(),
       _body(message) {
   // handle error codes
-  if (static_cast<int>(code) / 100 != 2) {
+  if (static_cast<int>(code) >= 400) {
     setBody(R"({"error": ")" +
             (message.empty() ? R"("uknown error")" : message) + R"("})");
   }
+
   if (code == HttpUtils::HttpStatusCode::UKNOWN) {
     setStatusCode(HttpUtils::HttpStatusCode::I_AM_TEAPOD);
     _reason_phrase = whatReasonPhrase(_status_code);
   }
-  size_t content_length = _body.length() + CRLF_LENGTH;
-  insertHeader("Content-Length", std::to_string(content_length));
+
+  if (!_body.empty()) {
+    size_t content_length = _body.length();
+    insertHeader("Content-Length", std::to_string(content_length));
+  }
 }
 
 HttpResponse::~HttpResponse() { _headers.clear(); }
@@ -60,7 +64,7 @@ void HttpResponse::setErrorResponse(const HttpUtils::HttpStatusCode& code,
                                     const std::string& msg) {
   setStatusCode(code);
   setBody(msg);
-  _reason_phrase = getReasonPhrase();
+  _reason_phrase = whatReasonPhrase(code);
 }
 
 // Getters

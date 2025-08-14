@@ -17,6 +17,7 @@
 
 #include <iostream>
 
+#include "HttpManager.hpp"
 #include "Logger.hpp"
 #include "config.hpp"
 
@@ -52,6 +53,7 @@ int main(int argc, char **argv) {
 
   /// assume we have only one server
   ConfigParser::ServerConfig serv_config = config.servers[0];
+  HttpManager http_manager(serv_config);
   int server_socketfd = socket(AF_INET, SOCK_STREAM, 0);
   if (server_socketfd == -1) {
     Logger::error("The socket() system call failed.");
@@ -124,7 +126,7 @@ int main(int argc, char **argv) {
         Logger::info("New connection accepted on fd " +
                      std::to_string(client_socketfd));
 
-        client_ev.events = EPOLLIN;
+        client_ev.events = EPOLLIN | EPOLLOUT;
         client_ev.data.fd = client_socketfd;
         if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client_socketfd, &client_ev) ==
             -1) {
@@ -163,17 +165,18 @@ int main(int argc, char **argv) {
          */
         std::cout << "\n -----> Received from client: -----> \n"
                   << raw_request << std::endl;
-        const char *response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
-            "Content-Length: 27\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "<h1>Hello from webserv!</h1>";
-
-        send(events[n].data.fd, response, strlen(response), 0);
+        HttpRequest request;
+        HttpResponse response;
+        std::string response_msg =
+            http_manager.processHttpRequest(raw_request, request, response);
+        bool keep_connection_alive = http_manager.keepConnectionAlive(response);
+        send(events[n].data.fd, response_msg.c_str(), response_msg.length(), 0);
         std::cout << " -----> Sent response to client: -----> \n"
-                  << events[n].data.fd << std::endl;
+                  << events[n].data.fd << ": " << response_msg << std::endl;
+        if (keep_connection_alive == false) {
+          epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[n].data.fd, nullptr);
+          close(events[n].data.fd);
+        }
         /** <<< end @test */
       }
     }
