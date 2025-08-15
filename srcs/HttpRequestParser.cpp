@@ -318,7 +318,7 @@ bool HttpRequestParser::validateRequestTarget(const std::string& target,
     if (ch < 32 || ch == 127 || ch == '<' || ch == '>' || ch == '"' ||
         ch == '\\') {
       request.setErrorStatus(
-          "Request target contains forbidden character: " + ch,
+          "Request target contains forbidden character: " + std::string(1, ch),
           HttpUtils::HttpStatusCode::BAD_REQUEST);
       return false;
     }
