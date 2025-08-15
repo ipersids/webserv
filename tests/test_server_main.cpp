@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   }
 
   struct epoll_event ev, events[WEBSERV_MAX_EVENTS];
-  ev.events = EPOLLIN;
+  ev.events = EPOLLIN | EPOLLOUT;
   ev.data.fd = server_socketfd;
   if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, server_socketfd, &ev) == -1) {
     Logger::error("The epoll_ctl() failed: server listen socket.");
