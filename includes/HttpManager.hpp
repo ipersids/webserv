@@ -15,6 +15,7 @@
 
 #include <string>
 
+#include "HttpMethodHandler.hpp"
 #include "HttpRequest.hpp"
 #include "HttpRequestParser.hpp"
 #include "HttpResponse.hpp"
@@ -38,16 +39,23 @@ class HttpManager {
   std::string processHttpRequest(const std::string& raw_request,
                                  HttpRequest& request, HttpResponse& response);
   bool keepConnectionAlive(const HttpResponse& response);
+  HttpResponse buildErrorResponse(const HttpRequest& request,
+                                  const HttpUtils::HttpStatusCode& code,
+                                  const std::string& err_msg,
+                                  const std::string& log_msg);
 
  private:
   const ConfigParser::ServerConfig& _config;
   HttpRequestParser _parser;
+  HttpMethodHandler _method_handler;
 
  private:
   void logRequestInfo(const HttpRequest& request);
   void logError(const HttpRequest& request, const std::string& msg);
   void logInfo(const std::string& msg);
-  void setConnectionHeader(const HttpRequest& request, HttpResponse& response);
+  void setConnectionHeader(const std::string& request_connection,
+                           const std::string& request_http_version,
+                           HttpResponse& response);
 };
 
 #endif  // _HTTP_MANAGER_HPP

@@ -1,0 +1,58 @@
+/**
+ * @file HttpMethodHandler.hpp
+ * @brief Handles HTTP method processing for webserver requests
+ * @author Julia Persidskaia (ipersids)
+ * @date 2025-08-14
+ * @version 1.0
+ *
+ */
+
+#ifndef _HTTP_METHOD_HANDLER_HPP
+#define _HTTP_METHOD_HANDLER_HPP
+
+#include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <string>
+
+#include "HttpRequest.hpp"
+#include "HttpResponse.hpp"
+#include "Logger.hpp"
+#include "config.hpp"
+
+class HttpRequest;
+class HttpResponse;
+
+class HttpMethodHandler {
+ public:
+  HttpMethodHandler() = delete;
+  HttpMethodHandler& operator=(const HttpMethodHandler& other) = delete;
+  HttpMethodHandler(const HttpMethodHandler& other) = delete;
+  ~HttpMethodHandler() = default;
+  HttpMethodHandler(const ConfigParser::ServerConfig& config);
+
+  HttpResponse processMethod(const HttpRequest& request);
+
+ private:
+  // variables
+  const ConfigParser::ServerConfig& _config;
+
+ private:
+  // main functions
+  HttpResponse handleGetMethod(const std::string& path);
+  // HttpResponse handlePostMethod(const std::string& path);
+  // HttpResponse handleDeleteMethod(const std::string& path);
+
+ private:
+  // helper functions
+  const ConfigParser::LocationConfig* getLocation(
+      const std::string& request_uri);
+  const std::string getFilePath(const ConfigParser::LocationConfig& location,
+                                const std::string& request_uri);
+  bool isFilePathSecure(const std::string& path, const std::string& root,
+                        std::string& message);
+  bool isMethodAllowed(const ConfigParser::LocationConfig& location,
+                       const std::string& method);
+};
+
+#endif  /// _HTTP_METHOD_HANDLER_HPP

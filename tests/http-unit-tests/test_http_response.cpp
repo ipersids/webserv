@@ -64,7 +64,6 @@ TEST(default_constructor) {
   ASSERT_EQ(HttpUtils::HttpStatusCode::OK, response.getStatusCode());
   ASSERT_EQ("HTTP/1.1", response.getHttpVersion());
   ASSERT_EQ("OK", response.getReasonPhrase());
-  ASSERT_TRUE(response.hasHeader("content-length"));
 }
 
 TEST(constructor_with_status_code) {

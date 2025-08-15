@@ -21,29 +21,25 @@
 #include "HttpManager.hpp"
 
 HttpManager::HttpManager(const ConfigParser::ServerConfig& config)
-    : _config(config), _parser() {}
+    : _config(config), _parser(), _method_handler(config) {}
 
 std::string HttpManager::processHttpRequest(const std::string& raw_request,
                                             HttpRequest& request,
                                             HttpResponse& response) {
   int exit_code = _parser.parseRequest(raw_request, request);
-  setConnectionHeader(request, response);
   if (exit_code != 0) {
-    std::string msg(request.getStatus().message);
-    response.setErrorResponse(request.getStatus().status_code, msg);
-    logError(request, "Failed to parse request: " + msg);
+    response = buildErrorResponse(request, request.getStatus().status_code,
+                                  request.getStatus().message,
+                                  "Failed to parse request");
     return response.convertToString();
   }
 
   logInfo("Processing " + request.getMethod() +
           " request: " + request.getRequestTarget());
 
-  /// @todo handle GET POST and DELETE
-
-  /// start @test >>>
-  response.setBody("<h1>Hello from webserv!</h1>");
-  response.insertHeader("Content-Type", "text/html");
-  /// end @ test <<<
+  response = _method_handler.processMethod(request);
+  setConnectionHeader(request.getHeader("Connection"), request.getHttpVersion(),
+                      response);
 
   return response.convertToString();
 }
@@ -59,20 +55,33 @@ bool HttpManager::keepConnectionAlive(const HttpResponse& response) {
   return true;
 }
 
-void HttpManager::setConnectionHeader(const HttpRequest& request,
+HttpResponse HttpManager::buildErrorResponse(
+    const HttpRequest& request, const HttpUtils::HttpStatusCode& code,
+    const std::string& err_msg, const std::string& log_msg) {
+  HttpResponse response;
+
+  response.setErrorResponse(code, err_msg);
+  setConnectionHeader(request.getHeader("Connection"), request.getHttpVersion(),
+                      response);
+  logError(request, log_msg + ": " + err_msg);
+
+  return response;
+}
+
+void HttpManager::setConnectionHeader(const std::string& request_connection,
+                                      const std::string& request_http_version,
                                       HttpResponse& response) {
   if (response.hasHeader("Connection")) {
-    response.removeHeader("Connection");
+    return;
   }
 
-  std::string conn = HttpUtils::toLowerCase(request.getHeader("Connection"));
-  std::string version = request.getHttpVersion();
-  HttpUtils::HttpStatusCode code = request.getStatus().status_code;
-
+  HttpUtils::HttpStatusCode code = response.getStatusCode();
   if (code == HttpUtils::HttpStatusCode::BAD_REQUEST ||
       code == HttpUtils::HttpStatusCode::REQUEST_TIMEOUT ||
-      code >= HttpUtils::HttpStatusCode::LENGTH_REQUIRED || conn == "close" ||
-      (version == "HTTP/1.0" && conn != "keep-alive")) {
+      code >= HttpUtils::HttpStatusCode::LENGTH_REQUIRED ||
+      request_connection == "close" ||
+      (request_http_version == "HTTP/1.0" &&
+       request_connection != "keep-alive")) {
     response.insertHeader("Connection", "close");
   } else {
     response.insertHeader("Connection", "keep-alive");
