@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  {
+
     int retval = server.createConfig(argv);
     if (retval) return retval;
 
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
 
     retval = server.createEpoll();
     if (retval) return retval;
-  }
+
 
   server.run();
   

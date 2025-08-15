@@ -6,7 +6,7 @@
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/08/15 15:31:58 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/08/15 16:12:15 by jrimpila         ###   ########.fr       */
+/*   Updated: 2025/08/15 17:17:39 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -99,6 +99,14 @@ int Webserv::createEpoll()
   amount_fds = -1;
   client_socketfd = -1;
   client_socklen = sizeof(cli_addr);
+
+    return 0;
+}
+
+
+int  Webserv::run()
+{
+   
   for (;;) {
     amount_fds =
         epoll_wait(epoll_fd, events, maxEvents, timeout);
@@ -107,14 +115,7 @@ int Webserv::createEpoll()
       Logger::shutdown();
       return 9;
     }
-    }
-    return 0;
-}
-
-
-void  Webserv::run()
-{
-
+    
     for (int n = 0; n < amount_fds; ++n) {
       if (events[n].data.fd == server_socketfd) {
         client_socketfd = accept(server_socketfd, (struct sockaddr *)&cli_addr,
@@ -182,4 +183,6 @@ void  Webserv::run()
         /** <<< end @test */
       }
     }
+    }
+    return 0;
 }

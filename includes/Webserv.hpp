@@ -6,7 +6,7 @@
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/18 13:48:02 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/08/15 16:01:47 by jrimpila         ###   ########.fr       */
+/*   Updated: 2025/08/15 17:17:48 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,7 +48,7 @@ class Webserv{
         int createConfig(char **argv);
         int createSocket();
         int createEpoll();
-        void run();
+        int run();
 
     private:
         ConfigParser::Config config;
