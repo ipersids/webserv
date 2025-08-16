@@ -22,7 +22,7 @@
 #include "config.hpp"
 
 /// @brief Maximum number of pending connections in listen queue
-#define WEBSERV_MAX_PENDING_CONNECTIONS 3
+#define WEBSERV_MAX_PENDING_CONNECTIONS 20
 /// @brief Maximum number of events to process in single epoll_wait call
 #define WEBSERV_MAX_EVENTS 10
 /// @brief Timeout for epoll_wait in seconds

@@ -13,6 +13,7 @@
  *    GET:
  *      - should not have body -> 4xx client error
  * 2) Should we handle http://... and https://... uri?
+ * 3) Handle error pages from config
  */
 
 #ifndef _HTTP_MANAGER_HPP

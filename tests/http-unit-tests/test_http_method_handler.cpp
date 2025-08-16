@@ -94,9 +94,9 @@ static void test_getFilePath(ConfigParser::ServerConfig& config) {
   assert(result == "docs/fusion_web/tours/subfolder/file.html");
 
   // cgi-bin location with different root
-  location = handler.getLocation("/cgi-bin/script.py");
-  result = handler.getFilePath(*location, "/cgi-bin/script.py");
-  assert(result == "./cgi-bin/script.py");
+  location = handler.getLocation("/test/script.py");
+  result = handler.getFilePath(*location, "/test/script.py");
+  assert(result == "./test/script.py");
 
   std::cout << "\t\t✓ passed" << std::endl;
 }

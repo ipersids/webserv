@@ -17,6 +17,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
@@ -42,9 +43,10 @@ class HttpMethodHandler {
 
  protected:
   // main functions
-  HttpResponse handleGetMethod(const std::string& path);
-  // HttpResponse handlePostMethod(const std::string& path);
-  // HttpResponse handleDeleteMethod(const std::string& path);
+  HttpResponse handleGetMethod(const std::string& path, const std::string& uri,
+                               const ConfigParser::LocationConfig& location);
+  HttpResponse handlePostMethod(const std::string& path);
+  HttpResponse handleDeleteMethod(const std::string& path);
 
  protected:
   // helper functions
@@ -56,6 +58,10 @@ class HttpMethodHandler {
                         std::string& message);
   bool isMethodAllowed(const ConfigParser::LocationConfig& location,
                        const std::string& method);
+  HttpResponse serveStaticFile(const std::string& path);
+  HttpResponse serveDirectoryContent(const std::string& path,
+                                     const std::string& uri);
+  const std::string getMIME(const std::string& path);
 };
 
 #endif  /// _HTTP_METHOD_HANDLER_HPP
