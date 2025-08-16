@@ -21,7 +21,8 @@
 #include "HttpManager.hpp"
 
 HttpManager::HttpManager(const ConfigParser::ServerConfig& config)
-    : _config(config), _parser() {(void)_config;}
+
+    : _config(config), _parser() {(void) _config;}
 
 std::string HttpManager::processHttpRequest(const std::string& raw_request,
                                             HttpRequest& request,
