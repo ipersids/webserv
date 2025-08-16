@@ -5,6 +5,9 @@
  * @date 2025-08-14
  * @version 1.0
  *
+ * @see GET request method:
+ * https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/GET
+ *
  */
 
 #ifndef _HTTP_METHOD_HANDLER_HPP
@@ -37,13 +40,13 @@ class HttpMethodHandler {
   // variables
   const ConfigParser::ServerConfig& _config;
 
- private:
+ protected:
   // main functions
   HttpResponse handleGetMethod(const std::string& path);
   // HttpResponse handlePostMethod(const std::string& path);
   // HttpResponse handleDeleteMethod(const std::string& path);
 
- private:
+ protected:
   // helper functions
   const ConfigParser::LocationConfig* getLocation(
       const std::string& request_uri);

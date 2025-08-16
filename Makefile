@@ -63,7 +63,8 @@ TEST_UNIT_NAME		:= unit_test.out
 TEST_UNIT_SRCS		:= tests/test_main.cpp \
 				tests/http-unit-tests/test_http_request.cpp \
 				tests/http-unit-tests/test_http_request_parser.cpp \
-				tests/http-unit-tests/test_http_response.cpp
+				tests/http-unit-tests/test_http_response.cpp \
+				tests/http-unit-tests/test_http_method_handler.cpp
 
 TEST_SERV_NAME		:= serv_test.out
 TEST_SERV_SRCS		:= tests/test_server_main.cpp

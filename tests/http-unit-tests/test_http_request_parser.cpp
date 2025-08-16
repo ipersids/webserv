@@ -171,6 +171,10 @@ static void test_malformed_request_line() {
   std::string no_target = "GET HTTP/1.1\r\n\r\n";
   ASSERT_PARSE_ERROR(parser, no_target, request);
 
+  // Missing leading / target
+  std::string wrong_target = "GET tours HTTP/1.1\r\n\r\n";
+  ASSERT_PARSE_ERROR(parser, wrong_target, request);
+
   // Missing version
   std::string no_version = "GET /index.html\r\n\r\n";
   ASSERT_PARSE_ERROR(parser, no_version, request);

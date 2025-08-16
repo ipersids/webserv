@@ -106,8 +106,12 @@ const std::string HttpMethodHandler::getFilePath(
     path += '/';
   }
 
+  size_t start = (request_uri[0] == '/') ? 1 : 0;
+  size_t end = (request_uri.find('?') != std::string::npos)
+                   ? request_uri.find('?')
+                   : request_uri.length();
   if (!request_uri.empty() && request_uri[0] == '/') {
-    path += request_uri.substr(1);
+    path += request_uri.substr(1, end - start);
   }
 
   return path;

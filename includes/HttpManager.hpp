@@ -8,6 +8,11 @@
  * The HttpManager class coordinates HTTP request handling and response
  * creation.
  *
+ * @todo
+ * 1) Double validation of request:
+ *    GET:
+ *      - should not have body -> 4xx client error
+ * 2) Should we handle http://... and https://... uri?
  */
 
 #ifndef _HTTP_MANAGER_HPP
