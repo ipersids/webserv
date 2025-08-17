@@ -151,35 +151,10 @@ HttpResponse HttpMethodHandler::serveStaticFile(const std::string& path) {
   }
   response.setBody(body);
   response.setStatusCode(HttpUtils::HttpStatusCode::OK);
-  response.insertHeader("Content-Type", getMIME(path));
+  response.insertHeader("Content-Type", HttpUtils::getMIME(path));
   Logger::info("Served file: " + path + " (" +
                response.getHeader("Content-Length") + " bytes)");
   return response;
-}
-
-const std::string HttpMethodHandler::getMIME(const std::string& path) {
-  size_t dot_pos = path.find_last_of('.');
-  if (dot_pos == std::string::npos) {
-    return "application/octet-stream";
-  }
-
-  std::string extension = HttpUtils::toLowerCase(path.substr(dot_pos + 1));
-
-  if (extension == "html" || extension == "htm") return "text/html";
-  if (extension == "css") return "text/css";
-  if (extension == "js") return "application/javascript";
-  if (extension == "json") return "application/json";
-  if (extension == "xml") return "application/xml";
-  if (extension == "txt") return "text/plain";
-  if (extension == "jpg" || extension == "jpeg") return "image/jpeg";
-  if (extension == "png") return "image/png";
-  if (extension == "gif") return "image/gif";
-  if (extension == "ico") return "image/x-icon";
-  if (extension == "pdf") return "application/pdf";
-  if (extension == "zip") return "application/zip";
-  if (extension == "tar") return "application/x-tar";
-
-  return "application/octet-stream";
 }
 
 HttpResponse HttpMethodHandler::serveDirectoryContent(const std::string& path,

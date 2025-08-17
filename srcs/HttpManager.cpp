@@ -43,6 +43,11 @@ std::string HttpManager::processHttpRequest(const std::string& raw_request,
   setConnectionHeader(request.getHeader("Connection"), request.getHttpVersion(),
                       response);
 
+  int status_code = static_cast<int>(response.getStatusCode());
+  if (status_code >= 400) {
+    auto location = HttpUtils::getLocation(request.getRequestTarget(), _config);
+    setErrorPageBody(location, status_code, response);
+  }
   return response.convertToString();
 }
 
@@ -107,4 +112,64 @@ void HttpManager::logError(const HttpRequest& request, const std::string& msg) {
 
 void HttpManager::logInfo(const std::string& msg) {
   Logger::info("HttpManager: " + msg);
+}
+
+void HttpManager::setErrorPageBody(const ConfigParser::LocationConfig* location,
+                                   int status_code, HttpResponse& response) {
+  std::string error_page_path = "/";
+  std::map<int, std::string>::const_iterator it =
+      location->error_pages.find(status_code);
+  if (it != location->error_pages.end()) {
+    error_page_path = it->second;
+  } else {
+    redurectToDefaultCatErrorPage(status_code, response);
+    Logger::error("Error page doesn't exits in config file: " +
+                  std::to_string(status_code));
+    Logger::warning("Getting default Cat error page '" +
+                    std::to_string(status_code) + "'");
+    return;
+  }
+
+  std::string path = HttpUtils::getFilePath(*location, error_page_path);
+  std::string tmp_body = "";
+  if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path) &&
+      HttpUtils::getFileContent(path, tmp_body) == 0) {
+    response.setBody(tmp_body);
+    if (response.hasHeader("Content-Type")) {
+      response.removeHeader("Content-Type");
+    }
+    response.insertHeader("Content-Type", HttpUtils::getMIME(path));
+    Logger::info("Serve error page: " + path);
+    return;
+  }
+  redurectToDefaultCatErrorPage(status_code, response);
+  Logger::error("Failed to get error page (" + std::to_string(status_code) +
+                ") file: " + path);
+  Logger::warning("Getting default Cat error page '" +
+                  std::to_string(status_code) + "'");
+}
+
+void HttpManager::redurectToDefaultCatErrorPage(int status_code,
+                                                HttpResponse& response) {
+  std::string cat_url = "https://http.cat/" + std::to_string(status_code);
+  std::string body =
+      "<!DOCTYPE html>\n"
+      "<html>\n"
+      "<head><title>Error " +
+      std::to_string(status_code) +
+      "</title></head>\n"
+      "<body style='text-align:center; font-family:Arial; "
+      "background-color:black; color:white;'>\n"
+      "<h1>Oooops! </h1>\n"
+      "<p><a href='/' style='color:white;'>Go home!</a></p>\n"
+      "<img src='" +
+      cat_url + "' alt='HTTP Cat " + std::to_string(status_code) +
+      "' style='max-width:100%; height:auto; margin:20px;'>\n"
+      "</body></html>";
+
+  response.setBody(body);
+  if (response.hasHeader("Content-Type")) {
+    response.removeHeader("Content-Type");
+  }
+  response.insertHeader("Content-Type", "text/html");
 }

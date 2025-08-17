@@ -39,12 +39,13 @@ const std::string HttpUtils::getFilePath(
     path += '/';
   }
 
-  size_t start = (request_uri[0] == '/') ? 1 : 0;
   size_t end = (request_uri.find('?') != std::string::npos)
                    ? request_uri.find('?')
                    : request_uri.length();
-  if (!request_uri.empty() && request_uri[0] == '/') {
-    path += request_uri.substr(1, end - start);
+  if (request_uri[0] == '/') {
+    path += request_uri.substr(1, end - 1);
+  } else {
+    path += request_uri.substr(0, end);
   }
 
   return path;
@@ -103,4 +104,29 @@ bool HttpUtils::isMethodAllowed(const ConfigParser::LocationConfig& location,
   return std::find(location.allowed_methods.begin(),
                    location.allowed_methods.end(),
                    method) != location.allowed_methods.end();
+}
+
+const std::string HttpUtils::getMIME(const std::string& path) {
+  size_t dot_pos = path.find_last_of('.');
+  if (dot_pos == std::string::npos) {
+    return "application/octet-stream";
+  }
+
+  std::string extension = HttpUtils::toLowerCase(path.substr(dot_pos + 1));
+
+  if (extension == "html" || extension == "htm") return "text/html";
+  if (extension == "css") return "text/css";
+  if (extension == "js") return "application/javascript";
+  if (extension == "json") return "application/json";
+  if (extension == "xml") return "application/xml";
+  if (extension == "txt") return "text/plain";
+  if (extension == "jpg" || extension == "jpeg") return "image/jpeg";
+  if (extension == "png") return "image/png";
+  if (extension == "gif") return "image/gif";
+  if (extension == "ico") return "image/x-icon";
+  if (extension == "pdf") return "application/pdf";
+  if (extension == "zip") return "application/zip";
+  if (extension == "tar") return "application/x-tar";
+
+  return "application/octet-stream";
 }

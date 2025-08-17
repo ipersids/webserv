@@ -53,7 +53,6 @@ class HttpMethodHandler {
   HttpResponse serveStaticFile(const std::string& path);
   HttpResponse serveDirectoryContent(const std::string& path,
                                      const std::string& uri);
-  const std::string getMIME(const std::string& path);
 };
 
 #endif  /// _HTTP_METHOD_HANDLER_HPP

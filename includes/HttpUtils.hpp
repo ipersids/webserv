@@ -101,6 +101,7 @@ bool isFilePathSecure(const std::string& path, const std::string& root,
 bool isMethodAllowed(const ConfigParser::LocationConfig& location,
                      const std::string& method);
 
+const std::string getMIME(const std::string& path);
 }  // namespace HttpUtils
 
 #endif  // _HTTP_UTILS_HPP

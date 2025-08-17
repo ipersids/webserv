@@ -19,6 +19,7 @@
 #ifndef _HTTP_MANAGER_HPP
 #define _HTTP_MANAGER_HPP
 
+#include <filesystem>
 #include <string>
 
 #include "HttpMethodHandler.hpp"
@@ -62,6 +63,9 @@ class HttpManager {
   void setConnectionHeader(const std::string& request_connection,
                            const std::string& request_http_version,
                            HttpResponse& response);
+  void setErrorPageBody(const ConfigParser::LocationConfig* location,
+                        int status_code, HttpResponse& response);
+  void redurectToDefaultCatErrorPage(int status_code, HttpResponse& response);
 };
 
 #endif  // _HTTP_MANAGER_HPP
