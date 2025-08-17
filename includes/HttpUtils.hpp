@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
 #include <string>
 
 #include "config.hpp"
@@ -91,6 +92,8 @@ const ConfigParser::LocationConfig* getLocation(
 
 const std::string getFilePath(const ConfigParser::LocationConfig& location,
                               const std::string& request_uri);
+
+int getFileContent(const std::string& path, std::string& body);
 
 bool isFilePathSecure(const std::string& path, const std::string& root,
                       std::string& message);

@@ -141,30 +141,20 @@ HttpResponse HttpMethodHandler::handleDeleteMethod(const std::string& path) {
 
 HttpResponse HttpMethodHandler::serveStaticFile(const std::string& path) {
   HttpResponse response;
+  std::string body = "";
 
-  try {
-    std::ifstream file(path, std::ios::binary);
-    if (!file.is_open()) {
-      Logger::error("Failed read file: " + path);
-      response.setErrorResponse(HttpUtils::HttpStatusCode::FORBIDDEN,
-                                "Access denied");
-      return response;
-    }
-    std::string body((std::istreambuf_iterator<char>(file)),
-                     std::istreambuf_iterator<char>());
-    file.close();
-    response.setBody(body);
-    response.setStatusCode(HttpUtils::HttpStatusCode::OK);
-    response.insertHeader("Content-Type", getMIME(path));
-    Logger::info("Served file: " + path + " (" +
-                 response.getHeader("Content-Length") + " bytes)");
-    return response;
-  } catch (const std::exception& e) {
-    Logger::error("Error serving file " + path + ": " + e.what());
-    response.setErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
-                              "Internal server error");
+  if (HttpUtils::getFileContent(path, body) == -1) {
+    Logger::error(body + ": " + path);
+    response.setErrorResponse(HttpUtils::HttpStatusCode::FORBIDDEN,
+                              "Access denied");
     return response;
   }
+  response.setBody(body);
+  response.setStatusCode(HttpUtils::HttpStatusCode::OK);
+  response.insertHeader("Content-Type", getMIME(path));
+  Logger::info("Served file: " + path + " (" +
+               response.getHeader("Content-Length") + " bytes)");
+  return response;
 }
 
 const std::string HttpMethodHandler::getMIME(const std::string& path) {

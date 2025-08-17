@@ -50,6 +50,24 @@ const std::string HttpUtils::getFilePath(
   return path;
 }
 
+int HttpUtils::getFileContent(const std::string& path, std::string& body) {
+  try {
+    std::ifstream file(path, std::ios::binary);
+    if (!file.is_open()) {
+      body = "Failed read file";
+      return -1;
+    }
+    std::string content((std::istreambuf_iterator<char>(file)),
+                        std::istreambuf_iterator<char>());
+    file.close();
+    body = content;
+  } catch (const std::exception& e) {
+    body = e.what();
+    return -1;
+  }
+  return 0;
+}
+
 bool HttpUtils::isFilePathSecure(const std::string& path,
                                  const std::string& root,
                                  std::string& message) {
