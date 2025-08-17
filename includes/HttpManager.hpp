@@ -65,7 +65,7 @@ class HttpManager {
                            HttpResponse& response);
   void setErrorPageBody(const ConfigParser::LocationConfig* location,
                         int status_code, HttpResponse& response);
-  void redurectToDefaultCatErrorPage(int status_code, HttpResponse& response);
+  void setDefaultCatErrorPage(int status_code, HttpResponse& response);
 };
 
 #endif  // _HTTP_MANAGER_HPP

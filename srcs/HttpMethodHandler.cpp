@@ -21,7 +21,7 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
   if (!location) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
                               "Page/file doesn't exist");
-    Logger::error("Requested location not foun: " + uri);
+    Logger::error("Requested location not found: " + uri);
     return response;
   }
   if (!location->redirect_url.empty()) {
@@ -46,6 +46,7 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
   if (!HttpUtils::isMethodAllowed(*location, request.getMethod())) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::METHOD_NOT_ALLOWED,
                               "Method " + request.getMethod() + " not allowed");
+    return response;
   }
 
   const HttpMethod method_code = request.getMethodCode();
@@ -63,7 +64,7 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
     default:
       response.setErrorResponse(
           HttpUtils::HttpStatusCode::NOT_IMPLEMENTED,
-          "Methog " + request.getMethod() + " not implemented");
+          "Method " + request.getMethod() + " not implemented");
       break;
   }
 

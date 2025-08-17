@@ -122,8 +122,8 @@ void HttpManager::setErrorPageBody(const ConfigParser::LocationConfig* location,
   if (it != location->error_pages.end()) {
     error_page_path = it->second;
   } else {
-    redurectToDefaultCatErrorPage(status_code, response);
-    Logger::error("Error page doesn't exits in config file: " +
+    setDefaultCatErrorPage(status_code, response);
+    Logger::error("Error page doesn't exist in config file: " +
                   std::to_string(status_code));
     Logger::warning("Getting default Cat error page '" +
                     std::to_string(status_code) + "'");
@@ -142,15 +142,15 @@ void HttpManager::setErrorPageBody(const ConfigParser::LocationConfig* location,
     Logger::info("Serve error page: " + path);
     return;
   }
-  redurectToDefaultCatErrorPage(status_code, response);
+  setDefaultCatErrorPage(status_code, response);
   Logger::error("Failed to get error page (" + std::to_string(status_code) +
                 ") file: " + path);
   Logger::warning("Getting default Cat error page '" +
                   std::to_string(status_code) + "'");
 }
 
-void HttpManager::redurectToDefaultCatErrorPage(int status_code,
-                                                HttpResponse& response) {
+void HttpManager::setDefaultCatErrorPage(int status_code,
+                                         HttpResponse& response) {
   std::string cat_url = "https://http.cat/" + std::to_string(status_code);
   std::string body =
       "<!DOCTYPE html>\n"
