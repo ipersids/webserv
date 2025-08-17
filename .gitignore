@@ -30,7 +30,6 @@
 *.exe
 *.out
 *.app
-test
 webserv
 
 # temporary directories

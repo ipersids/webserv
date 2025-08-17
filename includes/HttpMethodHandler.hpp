@@ -50,14 +50,6 @@ class HttpMethodHandler {
 
  protected:
   // helper functions
-  const ConfigParser::LocationConfig* getLocation(
-      const std::string& request_uri);
-  const std::string getFilePath(const ConfigParser::LocationConfig& location,
-                                const std::string& request_uri);
-  bool isFilePathSecure(const std::string& path, const std::string& root,
-                        std::string& message);
-  bool isMethodAllowed(const ConfigParser::LocationConfig& location,
-                       const std::string& method);
   HttpResponse serveStaticFile(const std::string& path);
   HttpResponse serveDirectoryContent(const std::string& path,
                                      const std::string& uri);
