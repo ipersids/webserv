@@ -1,6 +1,6 @@
 /**
  * @file HttpMethodHandler.cpp
- * @brief Handles HTTP method processing for webserver requests
+ * @brief Handles HTTP method processing for web server requests
  * @author Julia Persidskaia (ipersids)
  * @date 2025-08-14
  * @version 1.0
@@ -9,21 +9,46 @@
 
 #include "HttpMethodHandler.hpp"
 
+// constructor
+
+/**
+ * @brief Constructs an HttpMethodHandler with the given server configuration
+ * @param config Reference to the server configuration object
+ *
+ * @note The configuration reference must remain valid for the lifetime
+ *       of this HttpMethodHandler instance.
+ */
 HttpMethodHandler::HttpMethodHandler(const ConfigParser::ServerConfig& config)
     : _config(config) {}
 
+// public methods
+
+/**
+ * @brief Processes an HTTP request and returns the appropriate response
+ *
+ * This is the main entry point for HTTP method processing. It analyzes the
+ * request method and routes it to the appropriate handler (GET, POST, DELETE).
+ * The method also validates permissions and applies location-specific rules.
+ *
+ * @param request The HTTP request object containing method, URI, headers, and
+ * body
+ * @return HttpResponse object containing the complete response
+ */
 HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
   HttpResponse response;
   const std::string uri = request.getRequestTarget();
 
+  // find the longest match of location (config) for given target URI
   const ConfigParser::LocationConfig* location =
       HttpUtils::getLocation(uri, _config);
   if (!location) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
-                              "Page/file doesn't exist");
+                              "Requested location not found");
     Logger::error("Requested location not found: " + uri);
     return response;
   }
+
+  // check if this location requires redirection to another one
   if (!location->redirect_url.empty()) {
     response.setStatusCode(HttpUtils::HttpStatusCode::MOVED_PERMANENTLY);
     response.setBody("Redirecting to " + location->redirect_url);
@@ -33,22 +58,25 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
     return response;
   }
 
+  // find full path to requested target URI
   const std::string file_path = HttpUtils::getFilePath(*location, uri);
   std::string message = "";
   if (!HttpUtils::isFilePathSecure(file_path, location->root, message)) {
-    Logger::warning("Possibly a security problem " + uri);
-    Logger::error("Failed resolve uri " + uri + ": " + message);
+    Logger::warning("Possible security problem " + uri);
+    Logger::error("Failed to resolve uri " + uri + ": " + message);
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
                               "Page/file doesn't exist");
     return response;
   }
 
+  // check if method is allowed by location in config file
   if (!HttpUtils::isMethodAllowed(*location, request.getMethod())) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::METHOD_NOT_ALLOWED,
                               "Method " + request.getMethod() + " not allowed");
     return response;
   }
 
+  // perform method GET, POST or DELETE or give error
   const HttpMethod method_code = request.getMethodCode();
   switch (method_code) {
     case HttpMethod::GET:
@@ -71,13 +99,29 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
   return response;
 }
 
-/// Execute method
+/// protected methods
 
+/**
+ * @brief Handles HTTP GET requests
+ *
+ * Processes GET requests by serving static files or generating directory
+ * listings based on the requested path and location configuration.
+ *
+ * @param path The file system path to the requested resource
+ * @param uri The original URI from the request
+ * @param location The location configuration block that matches this request
+ *
+ * @return HttpResponse containing the file content or directory listing
+ *
+ * @see serveStaticFile()
+ * @see serveDirectoryContent()
+ */
 HttpResponse HttpMethodHandler::handleGetMethod(
     const std::string& path, const std::string& uri,
     const ConfigParser::LocationConfig& location) {
   HttpResponse response;
 
+  // check if file/directory exists
   if (!std::filesystem::exists(path)) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
                               "File not found");
@@ -85,7 +129,9 @@ HttpResponse HttpMethodHandler::handleGetMethod(
     return response;
   }
 
+  // check if it's a directory
   if (std::filesystem::is_directory(path)) {
+    // check if we have default file to serve
     if (!location.index.empty()) {
       std::string index_path = path;
       if (!index_path.empty() && index_path.back() != '/') {
@@ -99,6 +145,7 @@ HttpResponse HttpMethodHandler::handleGetMethod(
       }
     }
 
+    // check if directory listing is allowed by config
     if (location.autoindex) {
       Logger::info("Listing directory: " + path);
       return serveDirectoryContent(path, uri);
@@ -110,6 +157,7 @@ HttpResponse HttpMethodHandler::handleGetMethod(
     return response;
   }
 
+  // handle requested file
   if (std::filesystem::is_regular_file(path)) {
     Logger::info("Serving file: " + path);
     response = serveStaticFile(path);
@@ -122,6 +170,7 @@ HttpResponse HttpMethodHandler::handleGetMethod(
   return response;
 }
 
+/// @warning IT IS PLACEHOLDER, implementation needed
 HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path) {
   HttpResponse response;
   response.setBody("<h1>Hello from webserv!</h1>");
@@ -130,6 +179,7 @@ HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path) {
   return response;
 }
 
+/// @warning IT IS PLACEHOLDER, implementation needed
 HttpResponse HttpMethodHandler::handleDeleteMethod(const std::string& path) {
   HttpResponse response;
   response.setBody("<h1>Hello from webserv!</h1>");
@@ -140,6 +190,16 @@ HttpResponse HttpMethodHandler::handleDeleteMethod(const std::string& path) {
 
 /// Helper functions
 
+/**
+ * @brief Serves a static file from the file system
+ *
+ * Reads a file from the file system and creates an HTTP response with
+ * appropriate headers including Content-Type, Content-Length, and caching
+ * headers.
+ *
+ * @param path The file system path to the file to serve
+ * @return HttpResponse containing the file content and appropriate headers
+ */
 HttpResponse HttpMethodHandler::serveStaticFile(const std::string& path) {
   HttpResponse response;
   std::string body = "";
@@ -158,6 +218,17 @@ HttpResponse HttpMethodHandler::serveStaticFile(const std::string& path) {
   return response;
 }
 
+/**
+ * @brief Generates and serves directory listing content
+ *
+ * Creates an HTML directory listing page showing files and subdirectories
+ * in the specified path. Only used when auto-index is enabled in the
+ * location configuration.
+ *
+ * @param path The file system path to the directory to list
+ * @param uri The original URI from the request (used for link generation)
+ * @return HttpResponse containing HTML directory listing
+ */
 HttpResponse HttpMethodHandler::serveDirectoryContent(const std::string& path,
                                                       const std::string& uri) {
   HttpResponse response;
@@ -166,7 +237,7 @@ HttpResponse HttpMethodHandler::serveDirectoryContent(const std::string& path,
     std::ostringstream html;
     html << "<!DOCTYPE html>\n"
          << "<html>\n"
-         << "<head>\n "
+         << "<head>\n"
          << "<title>Index of " << uri << "</title>\n"
          << "</head>\n"
          << "<body>\n"
