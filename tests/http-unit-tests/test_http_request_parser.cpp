@@ -18,6 +18,34 @@
 #define ASSERT_PARSE_ERROR(parser, request_str, request_obj) \
   assert(parser.parseRequest(request_str, request_obj) != 0)
 
+static void test_invalid_get_request() {
+  std::cout << "Testing invalid GET request parsing..." << std::flush;
+
+  HttpRequestParser parser;
+  HttpRequest request;
+
+  std::string get =
+      "GET /index.html HTTP/1.1\r\n"
+      "Host: example.com\r\n"
+      "Content-Length: 24\r\n"
+      "\r\n"
+      "{\"name\":\"John\",\"age\":30}";
+
+  ASSERT_PARSE_ERROR(parser, get, request);
+
+  assert(request.getMethod() == "GET");
+  assert(request.getMethodCode() == HttpMethod::GET);
+  assert(request.getRequestTarget() == "/index.html");
+  assert(request.getHttpVersion() == "HTTP/1.1");
+  assert(request.hasHeader("host"));
+  assert(request.getHeader("host") == "example.com");
+  assert(request.hasHeader("content-length"));
+  assert(request.getHeader("content-length") == "24");
+  assert(request.getBody().empty());
+
+  std::cout << "\t✓ passed" << std::endl;
+}
+
 static void test_basic_get_request() {
   std::cout << "Testing basic GET request parsing..." << std::flush;
 
@@ -307,6 +335,7 @@ void run_http_request_parser_tests() {
   std::cout << "=== Running HttpRequestParser Tests ===\n" << std::endl;
 
   test_basic_get_request();
+  test_invalid_get_request();
   test_post_request_with_body();
   test_delete_request();
   test_multiple_headers();
