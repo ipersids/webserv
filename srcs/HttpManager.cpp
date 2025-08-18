@@ -20,14 +20,33 @@
 
 #include "HttpManager.hpp"
 
+/// constructor
+/**
+ * @brief Constructs an HttpManager with the given server configuration
+ * @param config Reference to the server configuration object
+ * @note The configuration reference must remain valid for the lifetime
+ *       of this HttpManager instance.
+ */
 HttpManager::HttpManager(const ConfigParser::ServerConfig& config)
     : _config(config), _parser(), _method_handler(config) {
   (void)_config;
 }
 
+/// public methods
+
+/**
+ * @brief Processes a raw HTTP request and generates a response
+ * @param raw_request The raw HTTP request string received from the client
+ * @param request HttpRequest object to be populated with parsed data
+ * @param response HttpResponse object to be populated with response data
+ * @return String representation of the complete HTTP response ready to send
+ *
+ * @note The request and response objects are modified by this method
+ */
 std::string HttpManager::processHttpRequest(const std::string& raw_request,
                                             HttpRequest& request,
                                             HttpResponse& response) {
+  // parse raw request into HttpRequest object
   int exit_code = _parser.parseRequest(raw_request, request);
   if (exit_code != 0) {
     response = buildErrorResponse(request, request.getStatus().status_code,
@@ -39,6 +58,7 @@ std::string HttpManager::processHttpRequest(const std::string& raw_request,
   logInfo("Processing " + request.getMethod() +
           " request: " + request.getRequestTarget());
 
+  // execute method GET, POST or DELETE if allowed for given target uri
   response = _method_handler.processMethod(request);
   setConnectionHeader(request.getHeader("Connection"), request.getHttpVersion(),
                       response);
@@ -48,9 +68,21 @@ std::string HttpManager::processHttpRequest(const std::string& raw_request,
     auto location = HttpUtils::getLocation(request.getRequestTarget(), _config);
     setErrorPageBody(location, status_code, response);
   }
+
+  // return response as a string to send it to the client
   return response.convertToString();
 }
 
+/**
+ * @brief Determines if the connection should be kept alive
+ *
+ * Analyzes the HTTP response to determine whether the connection should
+ * remain open for additional requests or be closed after sending the response.
+ * Decision is based on HTTP version, Connection header, and response status
+ *
+ * @param response The HTTP response object to analyze
+ * @return true if connection should be kept alive, false otherwise
+ */
 bool HttpManager::keepConnectionAlive(const HttpResponse& response) {
   std::string response_connection =
       HttpUtils::toLowerCase(response.getHeader("Connection"));
@@ -62,6 +94,17 @@ bool HttpManager::keepConnectionAlive(const HttpResponse& response) {
   return true;
 }
 
+/**
+ * @brief Builds an error response for the given HTTP status code
+ * @param request The original HTTP request that caused the error
+ * @param code The HTTP status code for the error response
+ * @param err_msg Error message to include in the response body
+ * @param log_msg Message to log for debugging purposes
+ *
+ * @return Complete HttpResponse object for the error
+ *
+ * @note Logs the error using Logger class (see includes/Logger.hpp)
+ */
 HttpResponse HttpManager::buildErrorResponse(
     const HttpRequest& request, const HttpUtils::HttpStatusCode& code,
     const std::string& err_msg, const std::string& log_msg) {
@@ -75,6 +118,14 @@ HttpResponse HttpManager::buildErrorResponse(
   return response;
 }
 
+// private methods
+
+/**
+ * @brief Sets the Connection header in the response
+ * @param request_connection The Connection header value from the request
+ * @param request_http_version The HTTP version from the request
+ * @param response The response object to modify
+ */
 void HttpManager::setConnectionHeader(const std::string& request_connection,
                                       const std::string& request_http_version,
                                       HttpResponse& response) {
@@ -95,6 +146,10 @@ void HttpManager::setConnectionHeader(const std::string& request_connection,
   }
 }
 
+/**
+ * @brief Logs information about the incoming HTTP request
+ * @param request The HTTP request to log information about
+ */
 void HttpManager::logRequestInfo(const HttpRequest& request) {
   std::ostringstream log_message;
 
@@ -105,15 +160,30 @@ void HttpManager::logRequestInfo(const HttpRequest& request) {
   Logger::info(log_message.str());
 }
 
+/**
+ * @brief Logs an error message associated with a specific request
+ * @param request The HTTP request associated with the error
+ * @param msg The error message to log
+ */
 void HttpManager::logError(const HttpRequest& request, const std::string& msg) {
   Logger::error("HttpManager: " + msg);
   logRequestInfo(request);
 }
 
+/**
+ * @brief Logs a general informational message
+ * @param msg The informational message to log
+ */
 void HttpManager::logInfo(const std::string& msg) {
   Logger::info("HttpManager: " + msg);
 }
 
+/**
+ * @brief Sets a custom error page body if configured
+ * @param location Pointer to the location configuration (may be nullptr)
+ * @param status_code The HTTP status code for the error
+ * @param response The response object to modify
+ */
 void HttpManager::setErrorPageBody(const ConfigParser::LocationConfig* location,
                                    int status_code, HttpResponse& response) {
   std::string error_page_path = "/";
@@ -149,6 +219,11 @@ void HttpManager::setErrorPageBody(const ConfigParser::LocationConfig* location,
                   std::to_string(status_code) + "'");
 }
 
+/**
+ * @brief Generates the default error page
+ * @param status_code The HTTP status code for the error
+ * @param response The response object to modify
+ */
 void HttpManager::setDefaultCatErrorPage(int status_code,
                                          HttpResponse& response) {
   std::string cat_url = "https://http.cat/" + std::to_string(status_code);

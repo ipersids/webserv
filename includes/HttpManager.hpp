@@ -9,11 +9,7 @@
  * creation.
  *
  * @todo
- * 1) Double validation of request:
- *    GET:
- *      - should not have body -> 4xx client error
- * 2) Should we handle http://... and https://... uri?
- * 3) Handle error pages from config
+ * 1) Should we handle http://... and https://... uri?
  */
 
 #ifndef _HTTP_MANAGER_HPP
@@ -35,6 +31,21 @@ class HttpRequest;
 class HttpRequestParser;
 class Logger;
 
+/**
+ * @class HttpManager
+ * @brief Central HTTP request/response management class
+ *
+ * The HttpManager class serves as the main coordinator for HTTP request
+ * processing and response generation in the Webserv.
+ *
+ * This class is responsible for:
+ * - Processing raw HTTP requests
+ * - Coordinating request parsing and validation
+ * - Managing HTTP method handling (GET, POST, DELETE)
+ * - Building appropriate HTTP responses
+ * - Handling error responses and custom error pages
+ * - Managing connection keep-alive logic
+ */
 class HttpManager {
  public:
   HttpManager(const ConfigParser::ServerConfig& config);
