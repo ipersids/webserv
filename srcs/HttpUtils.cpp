@@ -3,10 +3,23 @@
  * @brief Implementation of utility functions for HTTP request processing
  * @author Julia Persidskaia (ipersids)
  * @date 2025-07-28
+ * @version 2.0
+ *
+ * This file contains the implementation of various utility functions used
+ * throughout the HTTP server for common operations such as string manipulation,
+ * file handling, security checks, and MIME type detection.
+ *
  */
 
 #include "HttpUtils.hpp"
 
+/**
+ * @brief Converts a string to lowercase
+ * @param str The input string to convert to lowercase
+ * @return A new string with all characters converted to lowercase
+ *
+ * @note The original string is not modified; a copy is returned
+ */
 std::string HttpUtils::toLowerCase(const std::string& str) {
   std::string result = str;
   std::transform(result.begin(), result.end(), result.begin(),
@@ -14,6 +27,16 @@ std::string HttpUtils::toLowerCase(const std::string& str) {
   return result;
 }
 
+/**
+ * @brief Finds the best matching location configuration for a given URI
+ *
+ * This function searches through all location configurations in the server
+ * config and returns the one with the longest matching path prefix.
+ *
+ * @param request_uri The URI from the HTTP request to match against
+ * @param config The server configuration containing location blocks
+ * @return Pointer to the best matching LocationConfig, or nullptr if no match
+ */
 const ConfigParser::LocationConfig* HttpUtils::getLocation(
     const std::string& request_uri, const ConfigParser::ServerConfig& config) {
   const ConfigParser::LocationConfig* location = nullptr;
@@ -30,6 +53,18 @@ const ConfigParser::LocationConfig* HttpUtils::getLocation(
   return location;
 }
 
+/**
+ * @brief Constructs the file system path for a given request URI
+ *
+ * This function combines the location's root directory with the request URI
+ * to create the complete file system path.
+ *
+ * @param location The location configuration containing the root directory
+ * @param request_uri The URI from the HTTP request
+ * @return Complete file system path to the requested resource
+ *
+ * @note Automatically strips query parameters (everything after '?')
+ */
 const std::string HttpUtils::getFilePath(
     const ConfigParser::LocationConfig& location,
     const std::string& request_uri) {
@@ -51,6 +86,14 @@ const std::string HttpUtils::getFilePath(
   return path;
 }
 
+/**
+ * @brief Reads the entire content of a file into a string
+ * @param path The file system path to the file to read
+ * @param body [out] String reference to store the file content
+ * @return 0 on success, -1 on failure
+ *
+ * @note Opens file in binary mode to preserve exact content
+ */
 int HttpUtils::getFileContent(const std::string& path, std::string& body) {
   try {
     std::ifstream file(path, std::ios::binary);
@@ -69,6 +112,18 @@ int HttpUtils::getFileContent(const std::string& path, std::string& body) {
   return 0;
 }
 
+/**
+ * @brief Validates that a file path is secure and within allowed boundaries
+ *
+ * @param path The file path to validate
+ * @param root The root directory that should contain the path
+ * @param message [out] Error message if validation fails
+ * @return true if the path is secure, false otherwise
+
+ * @note Uses std::filesystem::weakly_canonical for safe path resolution
+ * @note Prevents directory traversal attacks (../../../etc/passwd)
+ * @note Handles symbolic links and relative path components
+ */
 bool HttpUtils::isFilePathSecure(const std::string& path,
                                  const std::string& root,
                                  std::string& message) {
@@ -95,6 +150,12 @@ bool HttpUtils::isFilePathSecure(const std::string& path,
   return true;
 }
 
+/**
+ * @brief Checks if an HTTP method is allowed for a specific location
+ * @param location The location configuration to check against
+ * @param method The HTTP method to validate (e.g., "GET", "POST", "DELETE")
+ * @return true if the method is allowed, false otherwise
+ */
 bool HttpUtils::isMethodAllowed(const ConfigParser::LocationConfig& location,
                                 const std::string& method) {
   if (location.allowed_methods.empty()) {
@@ -106,6 +167,18 @@ bool HttpUtils::isMethodAllowed(const ConfigParser::LocationConfig& location,
                    method) != location.allowed_methods.end();
 }
 
+/**
+ * @brief Determines the MIME type based on file extension
+ *
+ * This function analyzes the file extension of a given path and returns the
+ * appropriate MIME type. It supports common web file types and defaults to
+ * "application/octet-stream" for unknown extensions.
+ *
+ * @param path The file path or filename to analyze
+ * @return The MIME type string corresponding to the file extension
+ *
+ * @note Extension matching is case-insensitive
+ */
 const std::string HttpUtils::getMIME(const std::string& path) {
   size_t dot_pos = path.find_last_of('.');
   if (dot_pos == std::string::npos) {
