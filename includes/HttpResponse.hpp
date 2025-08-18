@@ -36,8 +36,8 @@ class HttpResponse {
       const HttpUtils::HttpStatusCode& code = HttpUtils::HttpStatusCode::OK,
       const std::string& message = "");
   ~HttpResponse();
-  HttpResponse& operator=(const HttpResponse& other) = delete;
-  HttpResponse(const HttpResponse& other) = delete;
+  HttpResponse& operator=(const HttpResponse& other);
+  HttpResponse(const HttpResponse& other);
 
   void setHttpVersion(const std::string& version);
   void setStatusCode(const HttpUtils::HttpStatusCode& code);

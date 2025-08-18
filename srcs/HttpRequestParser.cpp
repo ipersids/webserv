@@ -293,6 +293,15 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
       return PARSE_ERROR;
     }
   }
+
+  if (request.getMethodCode() == HttpMethod::GET &&
+      request.getBodyLength() != 0) {
+    request.setErrorStatus(
+        "GET requests must not contain a message body (RFC 7231)",
+        HttpUtils::HttpStatusCode::BAD_REQUEST);
+    return PARSE_ERROR;
+  }
+
   request.setBody(std::string(body));
   return PARSE_SUCCESS;
 }

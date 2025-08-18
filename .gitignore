@@ -30,12 +30,12 @@
 *.exe
 *.out
 *.app
-test
 webserv
 
 # temporary directories
 obj/*
 logs/*
+# docs/*
 
 # VS Compiled
 .vscode/*

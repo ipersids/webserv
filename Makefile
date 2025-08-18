@@ -17,7 +17,8 @@ SRCS		:= utils.cpp data.cpp ConfigParser.cpp Parser.cpp Tokenizer.cpp \
 			HttpRequestParser.cpp \
 			HttpResponse.cpp \
 			Logger.cpp \
-			HttpManager.cpp
+			HttpManager.cpp \
+			HttpMethodHandler.cpp
 SRC_MAIN	:= main.cpp
 
 OBJS		:= $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))
@@ -62,7 +63,8 @@ TEST_UNIT_NAME		:= unit_test.out
 TEST_UNIT_SRCS		:= tests/test_main.cpp \
 				tests/http-unit-tests/test_http_request.cpp \
 				tests/http-unit-tests/test_http_request_parser.cpp \
-				tests/http-unit-tests/test_http_response.cpp
+				tests/http-unit-tests/test_http_response.cpp \
+				tests/http-unit-tests/test_http_http_utils.cpp
 
 TEST_SERV_NAME		:= serv_test.out
 TEST_SERV_SRCS		:= tests/test_server_main.cpp

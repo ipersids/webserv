@@ -79,8 +79,6 @@ class HttpRequest {
   size_t getBodyLength(void) const;
   const HttpRequestState& getStatus(void) const;
 
-  bool isValid(void) const;
-
  private:
   // Request Line https://datatracker.ietf.org/doc/html/rfc7230#autoid-17
   HttpMethod _method_code;

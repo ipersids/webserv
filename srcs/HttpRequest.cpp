@@ -200,14 +200,6 @@ size_t HttpRequest::getBodyLength(void) const { return _body_length; }
  */
 const HttpRequestState& HttpRequest::getStatus(void) const { return _status; }
 
-/**
- * @brief Check if request is valid
- * @return true if request parsed successfully, false otherwise
- */
-bool HttpRequest::isValid(void) const {
-  return _status.result == HttpRequestResult::SUCCESS;
-}
-
 // Helpers
 
 /**
