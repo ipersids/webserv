@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+ <title>File Upload - Fusion Web</title>
+ <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+ <header>
+  <h1>📁 File Upload</h1>
+  <nav>
+   <a href="/">Home</a>
+   <a href="/uploads">View Uploads</a>
+  </nav>
+ </header>
+
+ <main>
+  <form action="/cgi-bin/upload.py" method="POST" enctype="multipart/form-data">
+   <div>
+    <label for="file">Choose File:</label>
+    <input type="file" id="file" name="uploaded_file" required>
+   </div>
+   <div>
+    <label for="desc">Description:</label>
+    <input type="text" id="desc" name="description" placeholder="Optional description">
+   </div>
+   <button type="submit">Upload File</button>
+  </form>
+ </main>
+</body>
+
+</html>
