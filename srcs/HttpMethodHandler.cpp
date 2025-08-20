@@ -182,9 +182,31 @@ HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path) {
 /// @warning IT IS PLACEHOLDER, implementation needed
 HttpResponse HttpMethodHandler::handleDeleteMethod(const std::string& path) {
   HttpResponse response;
-  response.setBody("<h1>Hello from webserv!</h1>");
-  response.insertHeader("Content-Type", "text/html");
-  (void)path;
+
+  // check if file/directory exists
+  if (!std::filesystem::exists(path)) {
+    response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
+                              "File not found");
+    Logger::error("Requested file doesn't exist: " + path);
+    return response;
+  }
+
+  if (std::filesystem::is_directory(path)) {
+    response.setErrorResponse(HttpUtils::HttpStatusCode::CONFLICT,
+                              "Deletion of directory is not allowed");
+    Logger::error("Rejected to delete directory: " + path);
+    return response;
+  }
+
+  if (!std::filesystem::remove(path)) {
+    response.setErrorResponse(HttpUtils::HttpStatusCode::FORBIDDEN,
+                              "Permission denied");
+    Logger::error("Rejected to delete file: " + path);
+    return response;
+  }
+
+  response.setStatusCode(HttpUtils::HttpStatusCode::NO_CONTENT);
+
   return response;
 }
 
