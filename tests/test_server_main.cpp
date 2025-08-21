@@ -37,6 +37,7 @@ int main(int argc, char **argv) {
   }
 
   ConfigParser::Config config;
+  std::map<int, std::string> client_buffers;
 
   try {
     Logger::init("logs/webserv.log");
@@ -137,45 +138,57 @@ int main(int argc, char **argv) {
       } else {
         char buffer[WEBSERV_BUFFER_SIZE];
         ssize_t bytes_read =
-            recv(events[n].data.fd, buffer, sizeof(buffer) - 1, 0);
+            recv(events[n].data.fd, buffer, sizeof(buffer) - 1, MSG_DONTWAIT);
 
-        if (bytes_read <= 0) {
-          if (bytes_read == 0) {
-            Logger::info("Client disconnected on fd " +
-                         std::to_string(events[n].data.fd));
-          } else {
-            Logger::error("Error reading from client fd " +
-                          std::to_string(events[n].data.fd) + ": " +
-                          std::string(strerror(errno)));
-          }
+        if (bytes_read == -1) {
+          continue;
+        }
+
+        if (bytes_read == 0) {
+          Logger::info("Client disconnected on fd " +
+                       std::to_string(events[n].data.fd));
+
+          client_buffers.erase(events[n].data.fd);  // Clean up buffer
           epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[n].data.fd, nullptr);
           close(events[n].data.fd);
           continue;
         }
+
         buffer[bytes_read] = '\0';
-        std::string raw_request(buffer, bytes_read);
-        Logger::info("Received " + std::to_string(bytes_read) +
-                     " bytes from fd " + std::to_string(events[n].data.fd));
-        /** @todo HTTP Manager
-         * 1. Parse raw_request
-         * 2. Handle the request
-         * 3. Handle response
-         *
-         * start @test >>>
-         */
-        std::cout << "\n -----> Received from client: -----> \n"
-                  << raw_request << std::endl;
-        HttpRequest request;
-        HttpResponse response;
-        std::string response_msg =
-            http_manager.processHttpRequest(raw_request, request, response);
-        bool keep_connection_alive = http_manager.keepConnectionAlive(response);
-        send(events[n].data.fd, response_msg.c_str(), response_msg.length(), 0);
-        std::cout << " -----> Sent response to client: -----> \n"
-                  << events[n].data.fd << ": " << response_msg << std::endl;
-        if (keep_connection_alive == false) {
-          epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[n].data.fd, nullptr);
-          close(events[n].data.fd);
+        client_buffers[events[n].data.fd] += std::string(buffer, bytes_read);
+        if (HttpUtils::isRawRequestComplete(
+                client_buffers[events[n].data.fd])) {
+          std::string raw_request = client_buffers[events[n].data.fd];
+          client_buffers.erase(events[n].data.fd);
+          Logger::info("Received " + std::to_string(bytes_read) +
+                       " bytes from fd " + std::to_string(events[n].data.fd));
+          /** @todo HTTP Manager
+           * 1. Parse raw_request
+           * 2. Handle the request
+           * 3. Handle response
+           *
+           * start @test >>>
+           */
+          std::cout << "\n -----> Received from client: -----> \n"
+                    << raw_request << std::endl;
+          HttpRequest request;
+          HttpResponse response;
+          std::string response_msg =
+              http_manager.processHttpRequest(raw_request, request, response);
+          bool keep_connection_alive =
+              http_manager.keepConnectionAlive(response);
+          send(events[n].data.fd, response_msg.c_str(), response_msg.length(),
+               0);
+          std::cout << " -----> Sent response to client: -----> \n"
+                    << events[n].data.fd << ": " << response_msg << std::endl;
+          if (keep_connection_alive == false) {
+            epoll_ctl(epoll_fd, EPOLL_CTL_DEL, events[n].data.fd, nullptr);
+            close(events[n].data.fd);
+          }
+        } else {
+          Logger::info("Received partial request from fd " +
+                       std::to_string(events[n].data.fd) +
+                       ", waiting for more data");
         }
         /** <<< end @test */
       }
