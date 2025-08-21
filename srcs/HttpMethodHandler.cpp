@@ -210,6 +210,14 @@ HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path,
   }
 
   // try to upload file
+  std::string file_name = generateFileName(extension);
+  std::string error_msg = "";
+  if (!saveUploadedFile(path, file_name, request.getBody(), error_msg)) {
+    response.setErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
+                              "Failed to upload file to " + path);
+    Logger::error("Failed to upload file to" + path);
+    return response;
+  }
 
   response.setStatusCode(HttpUtils::HttpStatusCode::CREATED);
   response.insertHeader("Content-Length", "0");
@@ -389,10 +397,32 @@ HttpResponse HttpMethodHandler::handleMultipartFileUpload(
 
 bool HttpMethodHandler::saveUploadedFile(const std::string& upload_dir,
                                          const std::string& file_name,
-                                         const std::string& content) {
-  (void)upload_dir;
-  (void)file_name;
-  (void)content;
+                                         const std::string& content,
+                                         std::string& error_msg) {
+  std::string full_path;
+  if (!upload_dir.empty() && upload_dir.back() == '/')
+    full_path = upload_dir + file_name;
+  else
+    full_path = upload_dir + "/" + file_name;
+
+  if (std::filesystem::exists(full_path)) {
+    error_msg = "File already exists";
+    return false;
+  }
+
+  try {
+    std::ofstream fs(full_path, std::ios::binary);
+    if (!fs) {
+      error_msg = "Failed to open file for writing: " + full_path;
+      return false;
+    }
+    fs << content.c_str();
+    fs.close();
+  } catch (const std::exception& e) {
+    error_msg = e.what();
+    return false;
+  }
+
   return true;
 }
 
@@ -408,4 +438,12 @@ bool HttpMethodHandler::isAllowedFileType(const std::string& extention) {
   }
 
   return false;
+}
+
+std::string HttpMethodHandler::generateFileName(std::string& extension) {
+  std::time_t now = std::time(NULL);
+  std::tm* ptm = std::localtime(&now);
+  char buf[32];
+  std::strftime(buf, 32, "%d.%m.%Y-%H%M%S", ptm);
+  return std::string(buf) + "." + extension;
 }

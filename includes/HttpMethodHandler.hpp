@@ -20,6 +20,7 @@
 #ifndef _HTTP_METHOD_HANDLER_HPP
 #define _HTTP_METHOD_HANDLER_HPP
 
+#include <ctime>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -79,8 +80,9 @@ class HttpMethodHandler {
                                          const std::string& content_type);
   bool saveUploadedFile(const std::string& upload_dir,
                         const std::string& file_name,
-                        const std::string& content);
+                        const std::string& content, std::string& error_msg);
   bool isAllowedFileType(const std::string& extention);
+  std::string generateFileName(std::string& extension);
 };
 
 #endif  /// _HTTP_METHOD_HANDLER_HPP

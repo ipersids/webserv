@@ -40,6 +40,7 @@ cgi_tester
 obj/*
 logs/*
 # docs/*
+!docs/fusion_web/uploads/upload.html
 
 # VS Compiled
 .vscode/*
