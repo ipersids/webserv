@@ -185,23 +185,59 @@ const std::string HttpUtils::getMIME(const std::string& path) {
     return "application/octet-stream";
   }
 
-  std::string extension = HttpUtils::toLowerCase(path.substr(dot_pos + 1));
+  std::string extension = HttpUtils::toLowerCase(path.substr(dot_pos));
 
-  if (extension == "html" || extension == "htm") return "text/html";
-  if (extension == "css") return "text/css";
-  if (extension == "js") return "application/javascript";
-  if (extension == "json") return "application/json";
-  if (extension == "xml") return "application/xml";
-  if (extension == "txt") return "text/plain";
-  if (extension == "jpg" || extension == "jpeg") return "image/jpeg";
-  if (extension == "png") return "image/png";
-  if (extension == "gif") return "image/gif";
-  if (extension == "ico") return "image/x-icon";
-  if (extension == "pdf") return "application/pdf";
-  if (extension == "zip") return "application/zip";
-  if (extension == "tar") return "application/x-tar";
+  if (extension == ".txt") return "text/plain";
+  if (extension == ".pdf") return "application/pdf";
+  if (extension == ".doc") return "application/msword";
+  if (extension == ".docx")
+    return "application/"
+           "vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (extension == ".jpg" || extension == ".jpeg") return "image/jpeg";
+  if (extension == ".png") return "image/png";
+  if (extension == ".gif") return "image/gif";
+  if (extension == ".zip") return "application/zip";
+  if (extension == ".tar") return "application/x-tar";
+  if (extension == ".html" || extension == ".htm") return "text/html";
+  if (extension == ".css") return "text/css";
+  if (extension == ".js") return "application/javascript";
+  if (extension == ".json") return "application/json";
 
   return "application/octet-stream";
+}
+
+/**
+ * @brief Determines file extension type based on the MIME type
+ *
+ * This function analyzes the MIME type and returns the appropriate
+ * file extension type. It supports common web file types and defaults to
+ * "" for unknown extensions.
+ *
+ * @param path The file path or filename to analyze
+ * @return The file extension
+ *
+ * @note matching is case-insensitive
+ */
+const std::string HttpUtils::getExtension(const std::string& content_type) {
+  std::string type = HttpUtils::toLowerCase(content_type);
+
+  if (type == "text/plain") return "txt";
+  if (type == "application/pdf") return "pdf";
+  if (type == "application/msword") return "doc";
+  if (type ==
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    return "docx";
+  if (type == "image/jpeg") return "jpg";
+  if (type == "image/png") return "png";
+  if (type == "image/gif") return "gif";
+  if (type == "application/zip") return "zip";
+  if (type == "application/x-tar") return "tar";
+  if (type == "text/html") return "html";
+  if (type == "text/css") return "css";
+  if (type == "application/javascript") return "js";
+  if (type == "application/json") return "json";
+
+  return "";
 }
 
 bool HttpUtils::isRawRequestComplete(const std::string& raw_request) {

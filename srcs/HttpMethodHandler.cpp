@@ -48,6 +48,17 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
     return response;
   }
 
+  if (request.getBodyLength() >= location->client_max_body_size) {
+    std::ostringstream error_msg;
+    error_msg << "Request body size (" << request.getBodyLength()
+              << " bytes) exceeds limit (" << location->client_max_body_size
+              << " bytes) for " << request.getMethod() << " request";
+    response.setErrorResponse(HttpUtils::HttpStatusCode::PAYLOAD_TOO_LARGE,
+                              error_msg.str());
+    Logger::error(error_msg.str());
+    return response;
+  }
+
   // check if this location requires redirection to another one
   if (!location->redirect_url.empty()) {
     response.setStatusCode(HttpUtils::HttpStatusCode::MOVED_PERMANENTLY);
@@ -83,7 +94,7 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
       response = handleGetMethod(file_path, uri, *location);
       break;
     case HttpMethod::POST:
-      response = handlePostMethod(file_path);
+      response = handlePostMethod(file_path, request);
       break;
     case HttpMethod::DELETE:
       response = handleDeleteMethod(file_path);
@@ -171,11 +182,37 @@ HttpResponse HttpMethodHandler::handleGetMethod(
 }
 
 /// @warning IT IS PLACEHOLDER, implementation needed
-HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path) {
+HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path,
+                                                 const HttpRequest& request) {
   HttpResponse response;
-  response.setBody("<h1>Hello from webserv!</h1>");
-  response.insertHeader("Content-Type", "text/html");
-  (void)path;
+
+  // check if file/directory exists
+  if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) {
+    response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
+                              "Upload directory not found");
+    Logger::error("Upload directory doesn't exist: " + path);
+    return response;
+  }
+
+  // proccess file uploading depending on content type
+  std::string content_type = request.getHeader("Content-Type");
+  if (content_type.find("multipart/form-data") != std::string::npos) {
+    return handleMultipartFileUpload(request, path, content_type);
+  }
+
+  std::string extension = HttpUtils::getExtension(content_type);
+  if (!isAllowedFileType(extension)) {
+    response.setErrorResponse(
+        HttpUtils::HttpStatusCode::FORBIDDEN,
+        "Uploaded content type is not allowed: " + content_type);
+    Logger::error("Uploaded content type is not allowed: " + extension);
+    return response;
+  }
+
+  // try to upload file
+
+  response.setStatusCode(HttpUtils::HttpStatusCode::CREATED);
+  response.insertHeader("Content-Length", "0");
   return response;
 }
 
@@ -338,4 +375,37 @@ HttpResponse HttpMethodHandler::serveDirectoryContent(const std::string& path,
   }
 
   return response;
+}
+
+HttpResponse HttpMethodHandler::handleMultipartFileUpload(
+    const HttpRequest& request, const std::string& path,
+    const std::string& content_type) {
+  HttpResponse response;
+  (void)path;
+  (void)content_type;
+  (void)request;
+  return response;
+}
+
+bool HttpMethodHandler::saveUploadedFile(const std::string& upload_dir,
+                                         const std::string& file_name,
+                                         const std::string& content) {
+  (void)upload_dir;
+  (void)file_name;
+  (void)content;
+  return true;
+}
+
+bool HttpMethodHandler::isAllowedFileType(const std::string& extention) {
+  static const std::vector<std::string> allowed = {
+      "txt", "pdf", "doc", "docx", "jpg", "jpeg", "png",
+      "gif", "zip", "tar", "html", "css", "js",   "json"};
+
+  for (const std::string& ext : allowed) {
+    if (ext == extention) {
+      return true;
+    }
+  }
+
+  return false;
 }

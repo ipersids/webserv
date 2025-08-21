@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title>File Upload - Fusion Web</title>
  <link rel="stylesheet" href="style.css">
 </head>
@@ -11,23 +13,60 @@
   <h1>📁 File Upload</h1>
   <nav>
    <a href="/">Home</a>
+   <a href="/tours">Tours</a>
+   <a href="/test">Test Directory</a>
    <a href="/uploads">View Uploads</a>
   </nav>
  </header>
 
  <main>
-  <form action="/cgi-bin/upload.py" method="POST" enctype="multipart/form-data">
-   <div>
-    <label for="file">Choose File:</label>
-    <input type="file" id="file" name="uploaded_file" required>
+  <section class="hero">
+   <h2>Upload Your Files</h2>
+   <p>Share your documents, images, and other files with ease!</p>
+  </section>
+
+  <div class="features">
+   <div class="feature">
+    <h3>📤 Upload Files</h3>
+    <form action="/uploads" method="POST" enctype="multipart/form-data" id="uploadForm">
+     <div style="margin-bottom: 1rem;">
+      <label for="file" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Choose File:</label>
+      <input type="file" id="file" name="uploaded_file" required
+       style="width: 100%; padding: 0.5rem; border: 2px dashed #5a67d8; border-radius: 8px; background: rgba(90, 103, 216, 0.05);">
+     </div>
+     <div style="margin-bottom: 1rem;">
+      <label for="description" style="display: block; margin-bottom: 0.5rem; font-weight: bold;">Description
+       (optional):</label>
+      <input type="text" id="description" name="description" placeholder="Optional file description"
+       style="width: 100%; padding: 0.5rem; border: 2px solid #e2e8f0; border-radius: 8px;">
+     </div>
+     <button type="submit" class="cta-button" style="width: 100%; margin-top: 1rem;">Upload File</button>
+    </form>
    </div>
-   <div>
-    <label for="desc">Description:</label>
-    <input type="text" id="desc" name="description" placeholder="Optional description">
+
+   <div class="feature">
+    <h3>📋 Upload Guidelines</h3>
+    <p><strong>Allowed file types:</strong></p>
+    <ul style="text-align: left; margin: 1rem 0;">
+     <li>📄 Documents: .txt, .pdf, .doc, .docx</li>
+     <li>🖼️ Images: .jpg, .jpeg, .png, .gif</li>
+     <li>📦 Archives: .zip, .tar, .gz</li>
+     <li>🌐 Web files: .html, .css, .js, .json</li>
+    </ul>
+    <p><strong>Maximum file size:</strong> 50MB</p>
    </div>
-   <button type="submit">Upload File</button>
-  </form>
+
+   <div class="feature">
+    <h3>📁 Browse Uploads</h3>
+    <p>View your uploaded files</p>
+    <a href="/uploads" class="cta-button">View Files</a>
+   </div>
+  </div>
  </main>
+
+ <footer>
+  <p>&copy; 2025 Fusion Web. Built with Webserv.</p>
+ </footer>
 </body>
 
 </html>
