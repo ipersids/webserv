@@ -215,7 +215,7 @@ HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path,
   if (!saveUploadedFile(path, file_name, request.getBody(), error_msg)) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
                               "Failed to upload file to " + path);
-    Logger::error("Failed to upload file to" + path);
+    Logger::error("Failed to upload file to " + path);
     return response;
   }
 
@@ -497,7 +497,7 @@ std::string HttpMethodHandler::getMultipartBoundary(
   if (val_start_pos < content_type.length() &&
       content_type[val_start_pos] == '"') {
     val_start_pos += 1;
-    val_end_pos = content_type.find("\"");
+    val_end_pos = content_type.find("\"", val_start_pos);
     if (val_end_pos == std::string::npos) {
       return "";
     }
@@ -563,13 +563,13 @@ bool HttpMethodHandler::saveUploadedFile(const std::string& upload_dir,
   return true;
 }
 
-bool HttpMethodHandler::isAllowedFileType(const std::string& extention) {
+bool HttpMethodHandler::isAllowedFileType(const std::string& extension) {
   static const std::vector<std::string> allowed = {
       "txt", "pdf", "doc", "docx", "jpg", "jpeg", "png",
       "gif", "zip", "tar", "html", "css", "js",   "json"};
 
   for (const std::string& ext : allowed) {
-    if (ext == extention) {
+    if (ext == extension) {
       return true;
     }
   }
@@ -577,7 +577,7 @@ bool HttpMethodHandler::isAllowedFileType(const std::string& extention) {
   return false;
 }
 
-std::string HttpMethodHandler::generateFileName(std::string& extension) {
+std::string HttpMethodHandler::generateFileName(const std::string& extension) {
   std::time_t now = std::time(NULL);
   std::tm* ptm = std::localtime(&now);
   char buf[32];
@@ -586,7 +586,7 @@ std::string HttpMethodHandler::generateFileName(std::string& extension) {
 }
 
 std::string HttpMethodHandler::generateUploadSuccessHtml(
-    std::vector<std::string>& files) {
+    const std::vector<std::string>& files) {
   return "<html><head><link rel=\"stylesheet\" href=\"/style.css\"></head>"
          "<body><div class=\"hero\"><h1>Upload Success</h1>"
          "<p>Files: " +

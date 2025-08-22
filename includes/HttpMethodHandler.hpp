@@ -78,8 +78,8 @@ class HttpMethodHandler {
   bool saveUploadedFile(const std::string& upload_dir,
                         const std::string& file_name,
                         const std::string& content, std::string& error_msg);
-  bool isAllowedFileType(const std::string& extention);
-  std::string generateFileName(std::string& extension);
+  bool isAllowedFileType(const std::string& extension);
+  std::string generateFileName(const std::string& extension);
 
  protected:
   HttpResponse handleMultipartFileUpload(const HttpRequest& request,
@@ -88,7 +88,7 @@ class HttpMethodHandler {
   std::string getMultipartBoundary(const std::string& content_type);
   std::string getMultipartFileName(const std::string& body, size_t start,
                                    size_t end);
-  std::string generateUploadSuccessHtml(std::vector<std::string>& files);
+  std::string generateUploadSuccessHtml(const std::vector<std::string>& files);
 };
 
 #endif  /// _HTTP_METHOD_HANDLER_HPP
