@@ -389,10 +389,147 @@ HttpResponse HttpMethodHandler::handleMultipartFileUpload(
     const HttpRequest& request, const std::string& path,
     const std::string& content_type) {
   HttpResponse response;
-  (void)path;
-  (void)content_type;
-  (void)request;
+  std::vector<std::string> saved_files;
+
+  std::string boundary = getMultipartBoundary(content_type);
+  if (boundary.empty()) {
+    response.setErrorResponse(
+        HttpUtils::HttpStatusCode::BAD_REQUEST,
+        "Missing or invalid boundary parameter in Content-Type");
+    Logger::error("Invalid multipart boundary in Content-Type: : " +
+                  content_type);
+    return response;
+  }
+
+  const std::string& body = request.getBody();
+  boundary = "--" + boundary;
+
+  size_t body_part_start = 0;
+  size_t boundary_len = boundary.length();
+  int file_count = 0;
+  while ((body_part_start = body.find(boundary, body_part_start)) !=
+         std::string::npos) {
+    body_part_start += boundary_len;
+    /// last boundary before prolog "--" + boundary + "--" ( -- delimiter)
+    if (body.compare(body_part_start, 2, "--") == 0) {
+      break;
+    }
+
+    if (body.compare(body_part_start, 2, "\r\n") == 0) {
+      body_part_start += 2;
+    }
+
+    size_t header_end = body.find("\r\n\r\n", body_part_start);
+    if (header_end == std::string::npos) {
+      break;
+    }
+
+    std::string filename =
+        getMultipartFileName(body, body_part_start, header_end);
+
+    if (filename.empty()) {
+      body_part_start = header_end + 4;
+      continue;
+    }
+
+    /// handle spaces in the file name
+    std::transform(filename.begin(), filename.end(), filename.begin(),
+                   [](unsigned char c) { return c == ' ' ? '-' : c; });
+
+    size_t content_start = header_end + 4;
+    size_t next_boundary = body.find(boundary, content_start);
+    if (next_boundary == std::string::npos) {
+      break;
+    }
+
+    size_t content_end = next_boundary;
+    if (content_end >= 2 && body.compare(content_end - 2, 2, "\r\n") == 0) {
+      content_end -= 2;
+    } else if (content_end >= 1 && body[content_end] == '\n') {
+      content_end -= 1;
+    }
+
+    std::string file_content =
+        body.substr(content_start, content_end - content_start);
+
+    std::string error_msg;
+    if (!saveUploadedFile(path, filename, file_content, error_msg)) {
+      response.setErrorResponse(
+          HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
+          "Failed to upload file: " + filename + " (" + error_msg + ")");
+      Logger::error("Failed to upload file: " + filename + " (" + error_msg +
+                    ")");
+      return response;
+    }
+    Logger::info("Uploaded file: " + filename + " (" +
+                 std::to_string(file_content.size()) + " bytes)");
+    file_count += 1;
+    body_part_start = next_boundary;
+    saved_files.push_back(filename);
+  }
+
+  if (file_count == 0) {
+    response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
+                              "No files found in multipart upload");
+    Logger::error("No files found in multipart upload");
+    return response;
+  }
+
+  response.setStatusCode(HttpUtils::HttpStatusCode::CREATED);
+  response.insertHeader("Content-Length", "0");
+  response.setBody(generateUploadSuccessHtml(saved_files));
   return response;
+}
+
+/// @see https://datatracker.ietf.org/doc/html/rfc2046#autoid-19
+/// @see https://www.rfc-editor.org/rfc/rfc9112.html#name-field-syntax
+/// field-line   = field-name ":" OWS field-value OWS
+std::string HttpMethodHandler::getMultipartBoundary(
+    const std::string& content_type) {
+  size_t boundary_pos = content_type.find("boundary=");
+
+  if (boundary_pos == std::string::npos) {
+    return "";
+  }
+
+  /// handle quoted value
+  size_t val_end_pos, val_start_pos = boundary_pos + 9;
+  if (val_start_pos < content_type.length() &&
+      content_type[val_start_pos] == '"') {
+    val_start_pos += 1;
+    val_end_pos = content_type.find("\"");
+    if (val_end_pos == std::string::npos) {
+      return "";
+    }
+    return content_type.substr(val_start_pos, val_end_pos - val_start_pos);
+  }
+
+  val_end_pos = content_type.find_first_of(" \t;", val_start_pos);
+  if (val_end_pos == std::string::npos) {
+    val_end_pos = content_type.length();
+  }
+
+  return content_type.substr(val_start_pos, val_end_pos - val_start_pos);
+}
+
+std::string HttpMethodHandler::getMultipartFileName(const std::string& body,
+                                                    size_t start, size_t end) {
+  std::string headers = body.substr(start, end - start);
+
+  /// Content-Disposition: form-data; name="field_name"; filename="file.txt"
+  size_t content_disp_pos = headers.find("Content-Disposition:");
+  if (content_disp_pos != std::string::npos) {
+    /// filename presents in file upload case
+    size_t file_name_pos = headers.find("filename=\"", content_disp_pos);
+    if (file_name_pos != std::string::npos) {
+      file_name_pos += 10;
+      size_t file_name_end = headers.find("\"", file_name_pos);
+      if (file_name_end != std::string::npos)
+        return headers.substr(file_name_pos, file_name_end - file_name_pos);
+    }
+  }
+
+  return "";
 }
 
 bool HttpMethodHandler::saveUploadedFile(const std::string& upload_dir,
@@ -416,7 +553,7 @@ bool HttpMethodHandler::saveUploadedFile(const std::string& upload_dir,
       error_msg = "Failed to open file for writing: " + full_path;
       return false;
     }
-    fs << content.c_str();
+    fs << content;
     fs.close();
   } catch (const std::exception& e) {
     error_msg = e.what();
@@ -446,4 +583,14 @@ std::string HttpMethodHandler::generateFileName(std::string& extension) {
   char buf[32];
   std::strftime(buf, 32, "%d.%m.%Y-%H%M%S", ptm);
   return std::string(buf) + "." + extension;
+}
+
+std::string HttpMethodHandler::generateUploadSuccessHtml(
+    std::vector<std::string>& files) {
+  return "<html><head><link rel=\"stylesheet\" href=\"/style.css\"></head>"
+         "<body><div class=\"hero\"><h1>Upload Success</h1>"
+         "<p>Files: " +
+         std::to_string(files.size()) +
+         "</p>"
+         "<a href=\"/\" class=\"cta-button\">Home</a></div></body></html>";
 }

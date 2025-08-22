@@ -171,72 +171,258 @@ bool HttpUtils::isMethodAllowed(const ConfigParser::LocationConfig& location,
  * @brief Determines the MIME type based on file extension
  *
  * This function analyzes the file extension of a given path and returns the
- * appropriate MIME type. It supports common web file types and defaults to
- * "application/octet-stream" for unknown extensions.
+ * appropriate MIME type. It supports a comprehensive list of web file types
+ * and defaults to "application/octet-stream" for unknown extensions.
  *
  * @param path The file path or filename to analyze
  * @return The MIME type string corresponding to the file extension
  *
  * @note Extension matching is case-insensitive
+ * @note Based on standard nginx MIME type mappings
  */
 const std::string HttpUtils::getMIME(const std::string& path) {
+  static const std::unordered_map<std::string, std::string> extension_to_mime =
+      {{"html", "text/html"},
+       {"htm", "text/html"},
+       {"shtml", "text/html"},
+       {"css", "text/css"},
+       {"xml", "text/xml"},
+       {"txt", "text/plain"},
+       {"mml", "text/mathml"},
+       {"jad", "text/vnd.sun.j2me.app-descriptor"},
+       {"wml", "text/vnd.wap.wml"},
+       {"htc", "text/x-component"},
+
+       {"gif", "image/gif"},
+       {"jpeg", "image/jpeg"},
+       {"jpg", "image/jpeg"},
+       {"png", "image/png"},
+       {"tif", "image/tiff"},
+       {"tiff", "image/tiff"},
+       {"wbmp", "image/vnd.wap.wbmp"},
+       {"ico", "image/x-icon"},
+       {"jng", "image/x-jng"},
+       {"bmp", "image/x-ms-bmp"},
+       {"svg", "image/svg+xml"},
+       {"svgz", "image/svg+xml"},
+       {"webp", "image/webp"},
+
+       {"js", "application/javascript"},
+       {"atom", "application/atom+xml"},
+       {"rss", "application/rss+xml"},
+       {"woff", "application/font-woff"},
+       {"jar", "application/java-archive"},
+       {"war", "application/java-archive"},
+       {"ear", "application/java-archive"},
+       {"json", "application/json"},
+       {"hqx", "application/mac-binhex40"},
+       {"doc", "application/msword"},
+       {"pdf", "application/pdf"},
+       {"ps", "application/postscript"},
+       {"eps", "application/postscript"},
+       {"ai", "application/postscript"},
+       {"rtf", "application/rtf"},
+       {"m3u8", "application/vnd.apple.mpegurl"},
+       {"xls", "application/vnd.ms-excel"},
+       {"eot", "application/vnd.ms-fontobject"},
+       {"ppt", "application/vnd.ms-powerpoint"},
+       {"wmlc", "application/vnd.wap.wmlc"},
+       {"kml", "application/vnd.google-earth.kml+xml"},
+       {"kmz", "application/vnd.google-earth.kmz"},
+       {"7z", "application/x-7z-compressed"},
+       {"cco", "application/x-cocoa"},
+       {"jardiff", "application/x-java-archive-diff"},
+       {"jnlp", "application/x-java-jnlp-file"},
+       {"run", "application/x-makeself"},
+       {"pl", "application/x-perl"},
+       {"pm", "application/x-perl"},
+       {"prc", "application/x-pilot"},
+       {"pdb", "application/x-pilot"},
+       {"rar", "application/x-rar-compressed"},
+       {"rpm", "application/x-redhat-package-manager"},
+       {"sea", "application/x-sea"},
+       {"swf", "application/x-shockwave-flash"},
+       {"sit", "application/x-stuffit"},
+       {"tcl", "application/x-tcl"},
+       {"tk", "application/x-tcl"},
+       {"der", "application/x-x509-ca-cert"},
+       {"pem", "application/x-x509-ca-cert"},
+       {"crt", "application/x-x509-ca-cert"},
+       {"xpi", "application/x-xpinstall"},
+       {"xhtml", "application/xhtml+xml"},
+       {"xspf", "application/xspf+xml"},
+       {"zip", "application/zip"},
+       {"docx",
+        "application/"
+        "vnd.openxmlformats-officedocument.wordprocessingml.document"},
+       {"xlsx",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+       {"pptx",
+        "application/"
+        "vnd.openxmlformats-officedocument.presentationml.presentation"},
+
+       {"mid", "audio/midi"},
+       {"midi", "audio/midi"},
+       {"kar", "audio/midi"},
+       {"mp3", "audio/mpeg"},
+       {"ogg", "audio/ogg"},
+       {"m4a", "audio/x-m4a"},
+       {"ra", "audio/x-realaudio"},
+
+       {"3gpp", "video/3gpp"},
+       {"3gp", "video/3gpp"},
+       {"ts", "video/mp2t"},
+       {"mp4", "video/mp4"},
+       {"mpeg", "video/mpeg"},
+       {"mpg", "video/mpeg"},
+       {"mov", "video/quicktime"},
+       {"webm", "video/webm"},
+       {"flv", "video/x-flv"},
+       {"m4v", "video/x-m4v"},
+       {"mng", "video/x-mng"},
+       {"asx", "video/x-ms-asf"},
+       {"asf", "video/x-ms-asf"},
+       {"wmv", "video/x-ms-wmv"},
+       {"avi", "video/x-msvideo"},
+
+       {"bin", "application/octet-stream"},
+       {"exe", "application/octet-stream"},
+       {"dll", "application/octet-stream"},
+       {"deb", "application/octet-stream"},
+       {"dmg", "application/octet-stream"},
+       {"iso", "application/octet-stream"},
+       {"img", "application/octet-stream"},
+       {"msi", "application/octet-stream"},
+       {"msp", "application/octet-stream"},
+       {"msm", "application/octet-stream"}};
+
   size_t dot_pos = path.find_last_of('.');
   if (dot_pos == std::string::npos) {
     return "application/octet-stream";
   }
 
-  std::string extension = HttpUtils::toLowerCase(path.substr(dot_pos));
+  std::string extension = HttpUtils::toLowerCase(path.substr(dot_pos + 1));
 
-  if (extension == ".txt") return "text/plain";
-  if (extension == ".pdf") return "application/pdf";
-  if (extension == ".doc") return "application/msword";
-  if (extension == ".docx")
-    return "application/"
-           "vnd.openxmlformats-officedocument.wordprocessingml.document";
-  if (extension == ".jpg" || extension == ".jpeg") return "image/jpeg";
-  if (extension == ".png") return "image/png";
-  if (extension == ".gif") return "image/gif";
-  if (extension == ".zip") return "application/zip";
-  if (extension == ".tar") return "application/x-tar";
-  if (extension == ".html" || extension == ".htm") return "text/html";
-  if (extension == ".css") return "text/css";
-  if (extension == ".js") return "application/javascript";
-  if (extension == ".json") return "application/json";
+  std::unordered_map<std::string, std::string>::const_iterator it =
+      extension_to_mime.find(extension);
+  if (it != extension_to_mime.end()) {
+    return it->second;
+  }
 
   return "application/octet-stream";
 }
 
 /**
- * @brief Determines file extension type based on the MIME type
+ * @brief Determines file extension based on the MIME type
  *
- * This function analyzes the MIME type and returns the appropriate
- * file extension type. It supports common web file types and defaults to
- * "" for unknown extensions.
+ * This function analyzes the MIME type and returns the most appropriate
+ * file extension. It supports a comprehensive list of web file types and
+ * defaults to empty string for unknown MIME types.
  *
- * @param path The file path or filename to analyze
- * @return The file extension
+ * @param content_type The MIME type string to analyze
+ * @return The file extension (without dot) corresponding to the MIME type
  *
- * @note matching is case-insensitive
+ * @note MIME type matching is case-insensitive
+ * @note Returns the first/most common extension for each MIME type
  */
 const std::string HttpUtils::getExtension(const std::string& content_type) {
-  std::string type = HttpUtils::toLowerCase(content_type);
+  static const std::unordered_map<std::string, std::string> mime_to_extension =
+      {
+          {"text/html", "html"},
+          {"text/css", "css"},
+          {"text/xml", "xml"},
+          {"text/plain", "txt"},
+          {"text/mathml", "mml"},
+          {"text/vnd.sun.j2me.app-descriptor", "jad"},
+          {"text/vnd.wap.wml", "wml"},
+          {"text/x-component", "htc"},
 
-  if (type == "text/plain") return "txt";
-  if (type == "application/pdf") return "pdf";
-  if (type == "application/msword") return "doc";
-  if (type ==
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-    return "docx";
-  if (type == "image/jpeg") return "jpg";
-  if (type == "image/png") return "png";
-  if (type == "image/gif") return "gif";
-  if (type == "application/zip") return "zip";
-  if (type == "application/x-tar") return "tar";
-  if (type == "text/html") return "html";
-  if (type == "text/css") return "css";
-  if (type == "application/javascript") return "js";
-  if (type == "application/json") return "json";
+          {"image/gif", "gif"},
+          {"image/jpeg", "jpeg"},
+          {"image/png", "png"},
+          {"image/tiff", "tiff"},
+          {"image/vnd.wap.wbmp", "wbmp"},
+          {"image/x-icon", "ico"},
+          {"image/x-jng", "jng"},
+          {"image/x-ms-bmp", "bmp"},
+          {"image/svg+xml", "svg"},
+          {"image/webp", "webp"},
 
+          {"application/javascript", "js"},
+          {"application/atom+xml", "atom"},
+          {"application/rss+xml", "rss"},
+          {"application/font-woff", "woff"},
+          {"application/java-archive", "jar"},
+          {"application/json", "json"},
+          {"application/mac-binhex40", "hqx"},
+          {"application/msword", "doc"},
+          {"application/pdf", "pdf"},
+          {"application/postscript", "ps"},
+          {"application/rtf", "rtf"},
+          {"application/vnd.apple.mpegurl", "m3u8"},
+          {"application/vnd.ms-excel", "xls"},
+          {"application/vnd.ms-fontobject", "eot"},
+          {"application/vnd.ms-powerpoint", "ppt"},
+          {"application/vnd.wap.wmlc", "wmlc"},
+          {"application/vnd.google-earth.kml+xml", "kml"},
+          {"application/vnd.google-earth.kmz", "kmz"},
+          {"application/x-7z-compressed", "7z"},
+          {"application/x-cocoa", "cco"},
+          {"application/x-java-archive-diff", "jardiff"},
+          {"application/x-java-jnlp-file", "jnlp"},
+          {"application/x-makeself", "run"},
+          {"application/x-perl", "pl"},
+          {"application/x-pilot", "prc"},
+          {"application/x-rar-compressed", "rar"},
+          {"application/x-redhat-package-manager", "rpm"},
+          {"application/x-sea", "sea"},
+          {"application/x-shockwave-flash", "swf"},
+          {"application/x-stuffit", "sit"},
+          {"application/x-tcl", "tcl"},
+          {"application/x-x509-ca-cert", "crt"},
+          {"application/x-xpinstall", "xpi"},
+          {"application/xhtml+xml", "xhtml"},
+          {"application/xspf+xml", "xspf"},
+          {"application/zip", "zip"},
+          {"application/"
+           "vnd.openxmlformats-officedocument.wordprocessingml.document",
+           "docx"},
+          {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+           "xlsx"},
+          {"application/"
+           "vnd.openxmlformats-officedocument.presentationml.presentation",
+           "pptx"},
+
+          {"audio/midi", "midi"},
+          {"audio/mpeg", "mp3"},
+          {"audio/ogg", "ogg"},
+          {"audio/x-m4a", "m4a"},
+          {"audio/x-realaudio", "ra"},
+
+          {"video/3gpp", "3gpp"},
+          {"video/mp2t", "ts"},
+          {"video/mp4", "mp4"},
+          {"video/mpeg", "mpeg"},
+          {"video/quicktime", "mov"},
+          {"video/webm", "webm"},
+          {"video/x-flv", "flv"},
+          {"video/x-m4v", "m4v"},
+          {"video/x-mng", "mng"},
+          {"video/x-ms-asf", "asf"},
+          {"video/x-ms-wmv", "wmv"},
+          {"video/x-msvideo", "avi"},
+
+          {"application/octet-stream", "bin"}
+          // prefer bin over exe/dll/deb/etc.
+      };
+
+  std::string mime = HttpUtils::toLowerCase(content_type);
+
+  std::unordered_map<std::string, std::string>::const_iterator it =
+      mime_to_extension.find(mime);
+  if (it != mime_to_extension.end()) {
+    return it->second;
+  }
   return "";
 }
 

@@ -40,7 +40,9 @@ cgi_tester
 obj/*
 logs/*
 # docs/*
+docs/fusion_web/uploads/*
 !docs/fusion_web/uploads/upload.html
+tests/test-configs/test_engnx.conf
 
 # VS Compiled
 .vscode/*

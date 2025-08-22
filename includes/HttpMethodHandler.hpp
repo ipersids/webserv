@@ -75,14 +75,20 @@ class HttpMethodHandler {
   HttpResponse serveStaticFile(const std::string& path);
   HttpResponse serveDirectoryContent(const std::string& path,
                                      const std::string& uri);
-  HttpResponse handleMultipartFileUpload(const HttpRequest& request,
-                                         const std::string& path,
-                                         const std::string& content_type);
   bool saveUploadedFile(const std::string& upload_dir,
                         const std::string& file_name,
                         const std::string& content, std::string& error_msg);
   bool isAllowedFileType(const std::string& extention);
   std::string generateFileName(std::string& extension);
+
+ protected:
+  HttpResponse handleMultipartFileUpload(const HttpRequest& request,
+                                         const std::string& path,
+                                         const std::string& content_type);
+  std::string getMultipartBoundary(const std::string& content_type);
+  std::string getMultipartFileName(const std::string& body, size_t start,
+                                   size_t end);
+  std::string generateUploadSuccessHtml(std::vector<std::string>& files);
 };
 
 #endif  /// _HTTP_METHOD_HANDLER_HPP
