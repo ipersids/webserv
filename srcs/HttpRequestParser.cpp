@@ -270,14 +270,6 @@ int HttpRequestParser::parseRequestBody(std::string_view body,
       return PARSE_ERROR;
     }
 
-    if (request.getBodyLength() >= MAX_REQUEST_BODY_SIZE) {
-      request.setErrorStatus("Body size " + std::to_string(body.length()) +
-                                 " exceeds maximum allowed size " +
-                                 std::to_string(MAX_REQUEST_BODY_SIZE),
-                             HttpUtils::HttpStatusCode::BAD_REQUEST);
-      return PARSE_ERROR;
-    }
-
     if (request.getBodyLength() != body.length()) {
       request.setErrorStatus("Content-Length mismatch: expected " +
                                  std::to_string(request.getBodyLength()) +

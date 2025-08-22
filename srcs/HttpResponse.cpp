@@ -127,6 +127,8 @@ bool HttpResponse::hasHeader(const std::string& field_name) const {
 std::string HttpResponse::convertToString(void) {
   std::ostringstream raw_response;
 
+  this->setCommonHeaders();
+
   // add status line
   raw_response << _http_version << " " << static_cast<int>(_status_code) << " "
                << _reason_phrase << "\r\n";
@@ -248,4 +250,19 @@ std::string HttpResponse::capitalizeHeaderFieldName(
 void HttpResponse::removeHeader(const std::string& field_name) {
   std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   _headers.erase(lowercase_name);
+}
+
+void HttpResponse::setCommonHeaders(void) {
+  if (!this->hasHeader("Server")) {
+    this->insertHeader("Server", "Webserv");
+  }
+
+  if (!this->hasHeader("Date")) {
+    std::time_t now = std::time(nullptr);
+    std::tm gmt{};
+    gmtime_r(&now, &gmt);
+    char buf[100];
+    std::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
+    this->insertHeader("Date", std::string(buf));
+  }
 }

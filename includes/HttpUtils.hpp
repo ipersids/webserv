@@ -102,6 +102,7 @@ bool isMethodAllowed(const ConfigParser::LocationConfig& location,
                      const std::string& method);
 
 const std::string getMIME(const std::string& path);
+const std::string getExtension(const std::string& content_type);
 
 bool isRawRequestComplete(const std::string& raw_request);
 }  // namespace HttpUtils

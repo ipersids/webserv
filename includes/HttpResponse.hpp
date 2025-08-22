@@ -20,6 +20,7 @@
 #ifndef _HTTP_RESPONSE_HPP
 #define _HTTP_RESPONSE_HPP
 
+#include <ctime>
 #include <iostream>
 #include <map>
 #include <sstream>
@@ -72,6 +73,7 @@ class HttpResponse {
  private:
   std::string whatReasonPhrase(const HttpUtils::HttpStatusCode& code);
   std::string capitalizeHeaderFieldName(const std::string& field_name);
+  void setCommonHeaders(void);
 };
 
 #endif  // _HTTP_RESPONSE_HPP

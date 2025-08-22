@@ -72,7 +72,6 @@ class HttpRequestParser {
 
  private:
   static const size_t MAX_REQUEST_TARGET_LENGTH = 2048;
-  static const size_t MAX_REQUEST_BODY_SIZE = 100 * 1024 * 1024;  // 100MB
 
  private:
   int parseRequestLine(std::string_view request_line, HttpRequest& request);
