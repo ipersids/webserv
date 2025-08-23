@@ -73,6 +73,7 @@ Status parseRequestHeaderLine(std::string_view header, HttpRequest& request);
 Status parseRequestBody(HttpRequest& request);
 Status parseRequestChunkedBodySize(HttpRequest& request);
 Status parseRequestChunkedBodyData(HttpRequest& request);
+Status parseRequestChunkedBodyTrailer(HttpRequest& request);
 
 bool validateRequestTarget(const std::string& terget, HttpRequest& request);
 bool validateHttpVersion(const std::string& version, HttpRequest& request);

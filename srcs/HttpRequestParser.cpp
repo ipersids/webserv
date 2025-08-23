@@ -79,6 +79,14 @@ HttpRequestParser::Status HttpRequestParser::parseRequest(
         }
         break;
 
+      // step 3.3: handle end of chunked request
+      case HttpParsingState::CHUNKED_BODY_TRAILER:
+        status = parseRequestChunkedBodyTrailer(request);
+        if (status != HttpRequestParser::Status::CONTINUE) {
+          return status;
+        }
+        break;
+
       case HttpParsingState::COMPLETE:
         return HttpRequestParser::Status::DONE;
 
@@ -340,6 +348,28 @@ HttpRequestParser::Status HttpRequestParser::parseRequestChunkedBodyData(
   request.appendBody(std::move(chunk_data));
   request.setParsingState(HttpParsingState::CHUNKED_BODY_SIZE);
 
+  return HttpRequestParser::Status::CONTINUE;
+}
+
+HttpRequestParser::Status HttpRequestParser::parseRequestChunkedBodyTrailer(
+    HttpRequest& request) {
+  std::string_view message = request.getUnparsedBuffer();
+
+  size_t chunk_trailer_end = message.find("\r\n");
+  if (chunk_trailer_end == std::string_view::npos) {
+    return HttpRequestParser::Status::WAIT_FOR_DATA;
+  }
+
+  // the trailer after the last chunk must be just "\r\n"
+  if (chunk_trailer_end != 0 || message.length() != 2) {
+    request.setErrorStatus("Malformed chunked body trailer",
+                           HttpUtils::HttpStatusCode::BAD_REQUEST);
+    return HttpRequestParser::Status::ERROR;
+  }
+
+  request.commitParsedBytes(chunk_trailer_end + 2);
+  request.eraseParsedBuffer();
+  request.setParsingState(HttpParsingState::COMPLETE);
   return HttpRequestParser::Status::CONTINUE;
 }
 

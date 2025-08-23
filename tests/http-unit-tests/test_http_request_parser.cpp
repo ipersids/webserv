@@ -423,14 +423,20 @@ static void test_http_cunked_request() {
   assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
   assert(request.getParsingState() == HttpParsingState::CHUNKED_BODY_SIZE);
   status = HttpRequestParser::parseRequest(part6, request);
-  // assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
   assert(request.getParsingState() == HttpParsingState::CHUNKED_BODY_TRAILER);
+  status = HttpRequestParser::parseRequest(part7, request);
+  assert(status == HttpRequestParser::Status::DONE);
+  assert(request.getParsingState() == HttpParsingState::COMPLETE);
 
   assert(request.getMethod() == "GET");
   assert(request.getRequestTarget() == "/index.html");
   assert(request.getHttpVersion() == "HTTP/1.0");
   assert(request.hasHeader("Host"));
   assert(request.hasHeader("Transfer-Encoding"));
+  assert(request.getBodyLength() == 24);
+  assert(request.getBody() == "{\"name\":\"John\",\"age\":30}");
+  assert(request.getUnparsedBuffer().empty());
 
   std::cout << "\t\t✓ passed" << std::endl;
 }
