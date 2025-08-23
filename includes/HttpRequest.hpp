@@ -2,8 +2,8 @@
  * @file HttpRequest.hpp
  * @brief HTTP Request storage and representation class
  * @author Julia Persidskaia (ipersids)
- * @date 2025-07-30
- * @version 1.0
+ * @date 2025-08-22
+ * @version 2.0
  *
  * This class represents an HTTP request as defined in RFC 7230.
  * It provides functionality to store and retrieve HTTP request components
@@ -38,17 +38,14 @@ enum class HttpMethod {
   UNKNOWN
 };
 
-enum class HttpRequestResult { PROCESSING, SUCCESS, ERROR };
-
-struct HttpRequestState {
-  HttpRequestResult result;
-  std::string message;
-  HttpUtils::HttpStatusCode status_code;
-
-  HttpRequestState(
-      HttpRequestResult res = HttpRequestResult::PROCESSING,
-      const std::string& msg = "",
-      HttpUtils::HttpStatusCode code = HttpUtils::HttpStatusCode::UKNOWN);
+enum class HttpParsingState {
+  REQUEST_LINE,
+  HEADERS,
+  BODY,
+  CHUNKED_BODY_SIZE,
+  CHUNKED_BODY_DATA,
+  CHUNKED_BODY_TRAILER,
+  COMPLETE
 };
 
 class HttpRequest {
@@ -64,22 +61,38 @@ class HttpRequest {
   void insertHeader(const std::string& field_name, std::string& value);
   void setBody(const std::string& body);
   void setBodyLength(size_t content_length);
-  void setSuccessStatus(
-      HttpUtils::HttpStatusCode status_code = HttpUtils::HttpStatusCode::OK);
   void setErrorStatus(const std::string& error_msg,
                       HttpUtils::HttpStatusCode error_code);
+  void setParsingState(HttpParsingState state);
+  void setChunkedStatus(bool is_chanked);
+  void setExpectedChunkLength(size_t expected_length);
+  void appendBuffer(const std::string& data);
+  void commitParsedBytes(size_t bytes);
+  void appendBody(std::string&& data);
 
   const std::string& getMethod(void) const;
   const HttpMethod& getMethodCode(void) const;
   const std::string& getRequestTarget(void) const;
   const std::string& getHttpVersion(void) const;
   const std::string& getHeader(const std::string& field_name) const;
-  bool hasHeader(const std::string& field_name) const;
   const std::string& getBody(void) const;
   size_t getBodyLength(void) const;
-  const HttpRequestState& getStatus(void) const;
+  std::string_view getUnparsedBuffer(void) const;
+  HttpParsingState getParsingState(void) const;
+  bool getChunkedStatus(void) const;
+  size_t getExpectedChunkLength(void) const;
+  HttpUtils::HttpStatusCode getStatusCode(void) const;
+  const std::string& getErrorMessage(void) const;
+
+  bool hasHeader(const std::string& field_name) const;
+  bool isErrorStatusCode(void) const;
+
+  void eraseParsedBuffer(size_t bytes = 0);
+  void reset(void);
 
  private:
+  std::string _buffer;
+  size_t _parsed_buffer_offset;
   // Request Line https://datatracker.ietf.org/doc/html/rfc7230#autoid-17
   HttpMethod _method_code;
   std::string _method_raw;
@@ -90,8 +103,16 @@ class HttpRequest {
   // Message Body https://datatracker.ietf.org/doc/html/rfc7230#autoid-26
   std::string _body;
   size_t _body_length;
-  // Error managment
-  HttpRequestState _status;
+  // Parsing managment
+  HttpParsingState _state;
+  bool _is_chanked;
+  size_t _expected_chunk_length;
+  bool _is_error;
+  HttpUtils::HttpStatusCode _status_code;
+  std::string _err_message;
+
+ protected:
+  static constexpr size_t PARSED_OFFSET_THRESHOLD = 4096;
 };
 
 #endif  // _HTTP_REQUEST_HPP

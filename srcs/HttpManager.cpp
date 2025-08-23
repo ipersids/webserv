@@ -2,8 +2,8 @@
  * @file HttpManager.cpp
  * @brief Manages HTTP request processing and response generation.
  * @author Julia Persidskaia (ipersids)
- * @date 2025-08-13
- * @version 1.0
+ * @date 2025-08-22
+ * @version 2.0
  *
  * The HttpManager class coordinates HTTP request handling and response
  * creation.
@@ -28,7 +28,7 @@
  *       of this HttpManager instance.
  */
 HttpManager::HttpManager(const ConfigParser::ServerConfig& config)
-    : _config(config), _parser(), _method_handler(config) {
+    : _config(config), _method_handler(config) {
   (void)_config;
 }
 
@@ -47,10 +47,12 @@ std::string HttpManager::processHttpRequest(const std::string& raw_request,
                                             HttpRequest& request,
                                             HttpResponse& response) {
   // parse raw request into HttpRequest object
-  int exit_code = _parser.parseRequest(raw_request, request);
-  if (exit_code != 0) {
-    response = buildErrorResponse(request, request.getStatus().status_code,
-                                  request.getStatus().message,
+  HttpRequestParser::Status state =
+      HttpRequestParser::parseRequest(raw_request, request);
+  if (state == HttpRequestParser::Status::ERROR) {
+    request.setParsingState(HttpParsingState::COMPLETE);
+    response = buildErrorResponse(request, request.getStatusCode(),
+                                  request.getErrorMessage(),
                                   "Failed to parse request");
     return response.convertToString();
   }
@@ -155,7 +157,7 @@ void HttpManager::logRequestInfo(const HttpRequest& request) {
 
   log_message << "\"" << request.getMethod() << " "
               << request.getRequestTarget() << " " << request.getHttpVersion()
-              << "\"" << static_cast<int>(request.getStatus().status_code);
+              << "\"" << static_cast<int>(request.getStatusCode());
 
   Logger::info(log_message.str());
 }

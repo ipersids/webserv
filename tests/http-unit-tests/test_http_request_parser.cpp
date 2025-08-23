@@ -2,7 +2,8 @@
  * @file test_http_request_parser.cpp
  * @brief Unit tests for HttpRequestParser class
  * @author Julia Persidskaia (ipersids)
- * @date 2025-07-29
+ * @date 2025-08-22
+ * @version 2.0
  */
 
 #include <cassert>
@@ -12,16 +13,23 @@
 #include "HttpRequest.hpp"
 #include "HttpRequestParser.hpp"
 
-#define ASSERT_PARSE_SUCCESS(parser, request_str, request_obj) \
-  assert(parser.parseRequest(request_str, request_obj) == 0)
+static void ASSERT_PARSE_SUCCESS(const std::string& request_str,
+                                 HttpRequest& request_obj) {
+  HttpRequestParser::Status status =
+      HttpRequestParser::parseRequest(request_str, request_obj);
+  assert(status == HttpRequestParser::Status::DONE);
+}
 
-#define ASSERT_PARSE_ERROR(parser, request_str, request_obj) \
-  assert(parser.parseRequest(request_str, request_obj) != 0)
+static void ASSERT_PARSE_ERROR(const std::string& request_str,
+                               HttpRequest& request_obj) {
+  HttpRequestParser::Status status =
+      HttpRequestParser::parseRequest(request_str, request_obj);
+  assert(status == HttpRequestParser::Status::ERROR);
+}
 
 static void test_invalid_get_request() {
   std::cout << "Testing invalid GET request parsing..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string get =
@@ -31,7 +39,7 @@ static void test_invalid_get_request() {
       "\r\n"
       "{\"name\":\"John\",\"age\":30}";
 
-  ASSERT_PARSE_ERROR(parser, get, request);
+  ASSERT_PARSE_SUCCESS(get, request);
 
   assert(request.getMethod() == "GET");
   assert(request.getMethodCode() == HttpMethod::GET);
@@ -41,7 +49,7 @@ static void test_invalid_get_request() {
   assert(request.getHeader("host") == "example.com");
   assert(request.hasHeader("content-length"));
   assert(request.getHeader("content-length") == "24");
-  assert(request.getBody().empty());
+  assert(request.getBody() == "{\"name\":\"John\",\"age\":30}");
 
   std::cout << "\t✓ passed" << std::endl;
 }
@@ -49,7 +57,6 @@ static void test_invalid_get_request() {
 static void test_basic_get_request() {
   std::cout << "Testing basic GET request parsing..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string basic_get =
@@ -57,7 +64,7 @@ static void test_basic_get_request() {
       "Host: example.com\r\n"
       "\r\n";
 
-  ASSERT_PARSE_SUCCESS(parser, basic_get, request);
+  ASSERT_PARSE_SUCCESS(basic_get, request);
 
   assert(request.getMethod() == "GET");
   assert(request.getMethodCode() == HttpMethod::GET);
@@ -73,7 +80,6 @@ static void test_basic_get_request() {
 static void test_post_request_with_body() {
   std::cout << "Testing POST request with body..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string post_request =
@@ -84,7 +90,7 @@ static void test_post_request_with_body() {
       "\r\n"
       "{\"name\":\"John\",\"age\":30}";
 
-  ASSERT_PARSE_SUCCESS(parser, post_request, request);
+  ASSERT_PARSE_SUCCESS(post_request, request);
 
   assert(request.getMethod() == "POST");
   assert(request.getMethodCode() == HttpMethod::POST);
@@ -104,7 +110,6 @@ static void test_post_request_with_body() {
 static void test_delete_request() {
   std::cout << "Testing DELETE request..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string delete_request =
@@ -113,7 +118,7 @@ static void test_delete_request() {
       "Authorization: Bearer token123\r\n"
       "\r\n";
 
-  ASSERT_PARSE_SUCCESS(parser, delete_request, request);
+  ASSERT_PARSE_SUCCESS(delete_request, request);
 
   assert(request.getMethod() == "DELETE");
   assert(request.getMethodCode() == HttpMethod::DELETE);
@@ -130,7 +135,6 @@ static void test_delete_request() {
 static void test_multiple_headers() {
   std::cout << "Testing request with headers..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string multi_header_request =
@@ -142,7 +146,7 @@ static void test_multiple_headers() {
       "Connection: keep-alive\r\n"
       "\r\n";
 
-  ASSERT_PARSE_SUCCESS(parser, multi_header_request, request);
+  ASSERT_PARSE_SUCCESS(multi_header_request, request);
 
   assert(request.hasHeader("host"));
   assert(request.hasHeader("user-agent"));
@@ -162,12 +166,13 @@ static void test_multiple_headers() {
 static void test_empty_request_error() {
   std::cout << "Testing empty request error..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string empty_request = "";
 
-  ASSERT_PARSE_ERROR(parser, empty_request, request);
+  HttpRequestParser::Status status =
+      HttpRequestParser::parseRequest(empty_request, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
 
   std::cout << "\t\t✓ passed" << std::endl;
 }
@@ -175,12 +180,13 @@ static void test_empty_request_error() {
 static void test_missing_crlf_error() {
   std::cout << "Testing missing CRLF error..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string no_crlf_request = "GET /index.html HTTP/1.1\nHost: example.com\n";
 
-  ASSERT_PARSE_ERROR(parser, no_crlf_request, request);
+  HttpRequestParser::Status status =
+      HttpRequestParser::parseRequest(no_crlf_request, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
 
   std::cout << "\t\t✓ passed" << std::endl;
 }
@@ -188,24 +194,27 @@ static void test_missing_crlf_error() {
 static void test_malformed_request_line() {
   std::cout << "Testing malformed request line..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   // Missing spaces
   std::string no_spaces = "GET/index.htmlHTTP/1.1\r\n\r\n";
-  ASSERT_PARSE_ERROR(parser, no_spaces, request);
+  ASSERT_PARSE_ERROR(no_spaces, request);
+  request.reset();
 
   // Missing target
   std::string no_target = "GET HTTP/1.1\r\n\r\n";
-  ASSERT_PARSE_ERROR(parser, no_target, request);
+  ASSERT_PARSE_ERROR(no_target, request);
+  request.reset();
 
   // Missing leading / target
   std::string wrong_target = "GET tours HTTP/1.1\r\n\r\n";
-  ASSERT_PARSE_ERROR(parser, wrong_target, request);
+  ASSERT_PARSE_ERROR(wrong_target, request);
+  request.reset();
 
   // Missing version
   std::string no_version = "GET /index.html\r\n\r\n";
-  ASSERT_PARSE_ERROR(parser, no_version, request);
+  ASSERT_PARSE_ERROR(no_version, request);
+  request.reset();
 
   std::cout << "\t✓ passed" << std::endl;
 }
@@ -213,7 +222,6 @@ static void test_malformed_request_line() {
 static void test_unknown_method_error() {
   std::cout << "Testing unknown method error..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string unknown_method =
@@ -221,7 +229,7 @@ static void test_unknown_method_error() {
       "Host: example.com\r\n"
       "\r\n";
 
-  ASSERT_PARSE_ERROR(parser, unknown_method, request);
+  ASSERT_PARSE_ERROR(unknown_method, request);
 
   std::cout << "\t\t✓ passed" << std::endl;
 }
@@ -229,20 +237,21 @@ static void test_unknown_method_error() {
 static void test_invalid_http_version() {
   std::cout << "Testing invalid HTTP version..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string invalid_format =
       "GET /index.html HTTP1.1\r\n"
       "Host: example.com\r\n"
       "\r\n";
-  ASSERT_PARSE_ERROR(parser, invalid_format, request);
+  ASSERT_PARSE_ERROR(invalid_format, request);
+  request.reset();
 
   std::string unsupported_version =
       "GET /index.html HTTP/2.0\r\n"
       "Host: example.com\r\n"
       "\r\n";
-  ASSERT_PARSE_ERROR(parser, unsupported_version, request);
+  ASSERT_PARSE_ERROR(unsupported_version, request);
+  request.reset();
 
   std::cout << "\t\t✓ passed" << std::endl;
 }
@@ -250,26 +259,28 @@ static void test_invalid_http_version() {
 static void test_request_target_validation() {
   std::cout << "Testing request target validation..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string valid_path =
       "GET /path/to/resource HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "\r\n";
-  ASSERT_PARSE_SUCCESS(parser, valid_path, request);
+  ASSERT_PARSE_SUCCESS(valid_path, request);
+  request.reset();
 
   std::string valid_query =
       "GET /search?q=test&limit=10 HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "\r\n";
-  ASSERT_PARSE_SUCCESS(parser, valid_query, request);
+  ASSERT_PARSE_SUCCESS(valid_query, request);
+  request.reset();
 
   std::string valid_http_url =
       "GET http://example.com/resource HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "\r\n";
-  ASSERT_PARSE_SUCCESS(parser, valid_http_url, request);
+  ASSERT_PARSE_SUCCESS(valid_http_url, request);
+  request.reset();
 
   std::cout << "\t✓ passed" << std::endl;
 }
@@ -277,7 +288,6 @@ static void test_request_target_validation() {
 static void test_edge_cases() {
   std::cout << "Testing edge cases..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   // Request without body but with headers
@@ -286,8 +296,9 @@ static void test_edge_cases() {
       "Host: example.com\r\n"
       "User-Agent: TestAgent\r\n"
       "\r\n";
-  ASSERT_PARSE_SUCCESS(parser, no_body, request);
+  ASSERT_PARSE_SUCCESS(no_body, request);
   assert(request.getBody().empty());
+  request.reset();
 
   // Request with empty body
   std::string empty_body =
@@ -295,15 +306,16 @@ static void test_edge_cases() {
       "Host: example.com\r\n"
       "Content-Length: 0\r\n"
       "\r\n";
-  ASSERT_PARSE_SUCCESS(parser, empty_body, request);
+  ASSERT_PARSE_SUCCESS(empty_body, request);
   assert(request.getBody().empty());
+  request.reset();
 
   // Minimum valid request
   std::string minimal =
       "GET / HTTP/1.1\r\n"
       "\r\n";
-  ASSERT_PARSE_SUCCESS(parser, minimal, request);
-  assert(request.getRequestTarget() == "/");
+  ASSERT_PARSE_ERROR(minimal, request);
+  request.reset();
 
   std::cout << "\t\t\t✓ passed" << std::endl;
 }
@@ -311,22 +323,23 @@ static void test_edge_cases() {
 static void test_http_version_support() {
   std::cout << "Testing HTTP version support..." << std::flush;
 
-  HttpRequestParser parser;
   HttpRequest request;
 
   std::string http10 =
       "GET /index.html HTTP/1.0\r\n"
       "Host: example.com\r\n"
       "\r\n";
-  ASSERT_PARSE_SUCCESS(parser, http10, request);
+  ASSERT_PARSE_SUCCESS(http10, request);
   assert(request.getHttpVersion() == "HTTP/1.0");
+  request.reset();
 
   std::string http11 =
       "GET /index.html HTTP/1.1\r\n"
       "Host: example.com\r\n"
       "\r\n";
-  ASSERT_PARSE_SUCCESS(parser, http11, request);
+  ASSERT_PARSE_SUCCESS(http11, request);
   assert(request.getHttpVersion() == "HTTP/1.1");
+  request.reset();
 
   std::cout << "\t\t✓ passed" << std::endl;
 }
@@ -334,8 +347,8 @@ static void test_http_version_support() {
 void run_http_request_parser_tests() {
   std::cout << "=== Running HttpRequestParser Tests ===\n" << std::endl;
 
-  test_basic_get_request();
   test_invalid_get_request();
+  test_basic_get_request();
   test_post_request_with_body();
   test_delete_request();
   test_multiple_headers();
