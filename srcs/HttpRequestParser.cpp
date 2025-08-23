@@ -55,9 +55,17 @@ HttpRequestParser::Status HttpRequestParser::parseRequest(
           return status;
         }
         break;
-      // step 3: handle body (if present)
+      // step 3.0: handle body (if present)
       case HttpParsingState::BODY:
         status = parseRequestBody(request);
+        if (status != HttpRequestParser::Status::CONTINUE) {
+          return status;
+        }
+        break;
+
+      // step 3.1: handle chunked body size
+      case HttpParsingState::CHUNKED_BODY_SIZE:
+        status = parseRequestChunkedBodySize(request);
         if (status != HttpRequestParser::Status::CONTINUE) {
           return status;
         }
@@ -246,7 +254,7 @@ HttpRequestParser::Status HttpRequestParser::parseRequestHeaderLine(
 HttpRequestParser::Status HttpRequestParser::parseRequestBody(
     HttpRequest& request) {
   std::string_view message = request.getUnparsedBuffer();
-  if (request.getBodyLength() < message.length()) {
+  if (request.getBodyLength() > message.length()) {
     return HttpRequestParser::Status::WAIT_FOR_DATA;
   }
 
@@ -262,6 +270,42 @@ HttpRequestParser::Status HttpRequestParser::parseRequestBody(
   request.setBody(std::string(message));
   request.commitParsedBytes(message.length());
   request.setParsingState(HttpParsingState::COMPLETE);
+
+  return HttpRequestParser::Status::CONTINUE;
+}
+
+HttpRequestParser::Status HttpRequestParser::parseRequestChunkedBodySize(
+    HttpRequest& request) {
+  std::string_view message = request.getUnparsedBuffer();
+
+  size_t chunk_size_end = message.find("\r\n");
+  if (chunk_size_end == std::string_view::npos) {
+    return HttpRequestParser::Status::WAIT_FOR_DATA;
+  }
+
+  std::string hex_chunk_size = std::string(message.substr(0, chunk_size_end));
+  try {
+    size_t chunk_size = std::stoull(hex_chunk_size, 0, 16);
+    request.setExpectedChunkLength(chunk_size);
+  } catch (const std::exception& e) {
+    request.setErrorStatus(
+        "Failed to parse chunk data size: " + std::string(e.what()) + " (" +
+            hex_chunk_size + ")",
+        HttpUtils::HttpStatusCode::BAD_REQUEST);
+    return HttpRequestParser::Status::ERROR;
+  } catch (...) {
+    request.setErrorStatus(
+        "Unknown problem during parsing chunk data size: " + hex_chunk_size,
+        HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR);
+    return HttpRequestParser::Status::ERROR;
+  }
+
+  if (request.getExpectedChunkLength() > 0) {
+    request.setParsingState(HttpParsingState::CHUNKED_BODY_DATA);
+  } else {
+    request.setParsingState(HttpParsingState::CHUNKED_BODY_TRAILER);
+  }
+  request.commitParsedBytes(chunk_size_end + 2);
 
   return HttpRequestParser::Status::CONTINUE;
 }

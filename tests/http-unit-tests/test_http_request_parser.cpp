@@ -310,11 +310,19 @@ static void test_edge_cases() {
   assert(request.getBody().empty());
   request.reset();
 
-  // Minimum valid request
+  // Minimum request (invalid)
   std::string minimal =
       "GET / HTTP/1.1\r\n"
       "\r\n";
   ASSERT_PARSE_ERROR(minimal, request);
+  request.reset();
+
+  // Minimum request (valid)
+  minimal =
+      "GET / HTTP/1.1\r\n"
+      "Host: localhost\r\n"
+      "\r\n";
+  ASSERT_PARSE_SUCCESS(minimal, request);
   request.reset();
 
   std::cout << "\t\t\t✓ passed" << std::endl;
@@ -344,6 +352,77 @@ static void test_http_version_support() {
   std::cout << "\t\t✓ passed" << std::endl;
 }
 
+static void test_http_partual_request() {
+  std::cout << "Testing partual request..." << std::flush;
+
+  HttpRequest request;
+
+  std::string part1 = "GET /index.html HTTP/1.0\r\n";
+  std::string part2 = "Host: example.com\r\n";
+  std::string part3 = "Content-Type: application/json\r\n";
+  std::string part4 =
+      "Content-Length: 24\r\n"
+      "\r\n";
+  std::string part5 = "{\"name\":\"John\",\"age\":30}";
+
+  HttpRequestParser::Status status =
+      HttpRequestParser::parseRequest(part1, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  status = HttpRequestParser::parseRequest(part2, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  status = HttpRequestParser::parseRequest(part3, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  status = HttpRequestParser::parseRequest(part4, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  status = HttpRequestParser::parseRequest(part5, request);
+  assert(status == HttpRequestParser::Status::DONE);
+
+  assert(request.getMethod() == "GET");
+  assert(request.getRequestTarget() == "/index.html");
+  assert(request.getHttpVersion() == "HTTP/1.0");
+  assert(request.hasHeader("Host"));
+  assert(request.hasHeader("Content-Type"));
+  assert(request.hasHeader("Content-Length"));
+  assert(request.getBody() == "{\"name\":\"John\",\"age\":30}");
+  assert(request.getBodyLength() == 24);
+
+  std::cout << "\t\t✓ passed" << std::endl;
+}
+
+static void test_http_cunked_request() {
+  std::cout << "Testing partual request..." << std::flush;
+
+  HttpRequest request;
+
+  std::string part1 = "GET /index.html HTTP/1.0\r\n";
+  std::string part2 = "Host: example.com\r\n";
+  std::string part3 = "Transfer-Encoding: chunked\r\n\r\n";
+  std::string part4 = "18\r\n";
+  std::string part5 = "{\"name\":\"John\",\"age\":30}\r\n";
+
+  HttpRequestParser::Status status =
+      HttpRequestParser::parseRequest(part1, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  status = HttpRequestParser::parseRequest(part2, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  status = HttpRequestParser::parseRequest(part3, request);
+  assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  assert(request.getParsingState() == HttpParsingState::CHUNKED_BODY_SIZE);
+  status = HttpRequestParser::parseRequest(part4, request);
+  // assert(status == HttpRequestParser::Status::WAIT_FOR_DATA);
+  assert(request.getParsingState() == HttpParsingState::CHUNKED_BODY_DATA);
+  // status = HttpRequestParser::parseRequest(part5, request);
+  // assert(status == HttpRequestParser::Status::DONE);
+
+  assert(request.getMethod() == "GET");
+  assert(request.getRequestTarget() == "/index.html");
+  assert(request.getHttpVersion() == "HTTP/1.0");
+  assert(request.hasHeader("Host"));
+  assert(request.hasHeader("Transfer-Encoding"));
+
+  std::cout << "\t\t✓ passed" << std::endl;
+}
+
 void run_http_request_parser_tests() {
   std::cout << "=== Running HttpRequestParser Tests ===\n" << std::endl;
 
@@ -360,6 +439,8 @@ void run_http_request_parser_tests() {
   test_request_target_validation();
   test_http_version_support();
   test_edge_cases();
+  test_http_partual_request();
+  test_http_cunked_request();
 
   std::cout << "\nAll HttpRequestParser tests passed!\n" << std::endl;
 }
