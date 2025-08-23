@@ -55,7 +55,7 @@ HttpRequestParser::Status HttpRequestParser::parseRequest(
           return status;
         }
         break;
-      // step 3.0: handle body (if present)
+      // step 3.0: handle simple body (if present)
       case HttpParsingState::BODY:
         status = parseRequestBody(request);
         if (status != HttpRequestParser::Status::CONTINUE) {
@@ -66,6 +66,14 @@ HttpRequestParser::Status HttpRequestParser::parseRequest(
       // step 3.1: handle chunked body size
       case HttpParsingState::CHUNKED_BODY_SIZE:
         status = parseRequestChunkedBodySize(request);
+        if (status != HttpRequestParser::Status::CONTINUE) {
+          return status;
+        }
+        break;
+
+      // step 3.2: handle chunked body data
+      case HttpParsingState::CHUNKED_BODY_DATA:
+        status = parseRequestChunkedBodyData(request);
         if (status != HttpRequestParser::Status::CONTINUE) {
           return status;
         }
@@ -158,9 +166,8 @@ HttpRequestParser::Status HttpRequestParser::parseRequestHeaders(
     HttpRequest& request) {
   std::string_view message = request.getUnparsedBuffer();
 
-  if (message.find("\r\n") != std::string_view::npos && message.length() == 2) {
-    std::cout << "Malformed or empty header line encountered" << std::endl;
-    request.setErrorStatus("Malformed or empty header line encountered",
+  if (message.find("\r\n") == 0) {
+    request.setErrorStatus("Malformed header - missing Host",
                            HttpUtils::HttpStatusCode::BAD_REQUEST);
     return HttpRequestParser::Status::ERROR;
   }
@@ -306,6 +313,32 @@ HttpRequestParser::Status HttpRequestParser::parseRequestChunkedBodySize(
     request.setParsingState(HttpParsingState::CHUNKED_BODY_TRAILER);
   }
   request.commitParsedBytes(chunk_size_end + 2);
+
+  return HttpRequestParser::Status::CONTINUE;
+}
+
+HttpRequestParser::Status HttpRequestParser::parseRequestChunkedBodyData(
+    HttpRequest& request) {
+  std::string_view message = request.getUnparsedBuffer();
+
+  size_t chunk_data_end = message.find("\r\n");
+  if (chunk_data_end == std::string_view::npos) {
+    return HttpRequestParser::Status::WAIT_FOR_DATA;
+  }
+
+  std::string chunk_data = std::string(message.substr(0, chunk_data_end));
+  if (chunk_data.length() != request.getExpectedChunkLength()) {
+    request.setErrorStatus(
+        "Chunk length mismatch: expected " +
+            std::to_string(request.getExpectedChunkLength()) + " bytes, got " +
+            std::to_string(chunk_data.length()) + " bytes",
+        HttpUtils::HttpStatusCode::BAD_REQUEST);
+    return HttpRequestParser::Status::ERROR;
+  }
+
+  request.commitParsedBytes(chunk_data_end + 2);
+  request.appendBody(std::move(chunk_data));
+  request.setParsingState(HttpParsingState::CHUNKED_BODY_SIZE);
 
   return HttpRequestParser::Status::CONTINUE;
 }
