@@ -15,7 +15,11 @@
 #define _HTTP_UTILS_HPP
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <string>
+
+#include "config.hpp"
 
 #define CRLF_LENGTH 2
 
@@ -82,6 +86,25 @@ enum class HttpStatusCode {
  * @warning This function only handles ASCII characters correctly.
  */
 std::string toLowerCase(const std::string& str);
+
+const ConfigParser::LocationConfig* getLocation(
+    const std::string& request_uri, const ConfigParser::ServerConfig& config);
+
+const std::string getFilePath(const ConfigParser::LocationConfig& location,
+                              const std::string& request_uri);
+
+int getFileContent(const std::string& path, std::string& body);
+
+bool isFilePathSecure(const std::string& path, const std::string& root,
+                      std::string& message);
+
+bool isMethodAllowed(const ConfigParser::LocationConfig& location,
+                     const std::string& method);
+
+const std::string getMIME(const std::string& path);
+const std::string getExtension(const std::string& content_type);
+
+bool isRawRequestComplete(const std::string& raw_request);
 }  // namespace HttpUtils
 
 #endif  // _HTTP_UTILS_HPP

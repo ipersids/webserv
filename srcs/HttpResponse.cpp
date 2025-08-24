@@ -24,6 +24,23 @@ HttpResponse::HttpResponse(const HttpUtils::HttpStatusCode& code,
   }
 }
 
+HttpResponse& HttpResponse::operator=(const HttpResponse& other) {
+  if (this == &other) {
+    return *this;
+  }
+
+  this->_body = other._body;
+  this->_headers.clear();
+  this->_headers = other._headers;
+  this->_http_version = other._http_version;
+  this->_reason_phrase = other._reason_phrase;
+  this->_status_code = other._status_code;
+
+  return *this;
+}
+
+HttpResponse::HttpResponse(const HttpResponse& other) { *this = other; }
+
 HttpResponse::~HttpResponse() { _headers.clear(); }
 
 // Setters
@@ -63,7 +80,11 @@ void HttpResponse::setBody(const std::string& body) {
 void HttpResponse::setErrorResponse(const HttpUtils::HttpStatusCode& code,
                                     const std::string& msg) {
   setStatusCode(code);
-  setBody(msg);
+  setBody(R"({"error": ")" + msg + R"("})");
+  if (this->hasHeader("Content-Type")) {
+    removeHeader("Content-Type");
+  }
+  insertHeader("Content-Type", "application/json");
   _reason_phrase = whatReasonPhrase(code);
 }
 
@@ -105,6 +126,8 @@ bool HttpResponse::hasHeader(const std::string& field_name) const {
 
 std::string HttpResponse::convertToString(void) {
   std::ostringstream raw_response;
+
+  this->setCommonHeaders();
 
   // add status line
   raw_response << _http_version << " " << static_cast<int>(_status_code) << " "
@@ -227,4 +250,19 @@ std::string HttpResponse::capitalizeHeaderFieldName(
 void HttpResponse::removeHeader(const std::string& field_name) {
   std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   _headers.erase(lowercase_name);
+}
+
+void HttpResponse::setCommonHeaders(void) {
+  if (!this->hasHeader("Server")) {
+    this->insertHeader("Server", "Webserv");
+  }
+
+  if (!this->hasHeader("Date")) {
+    std::time_t now = std::time(nullptr);
+    std::tm gmt{};
+    gmtime_r(&now, &gmt);
+    char buf[100];
+    std::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
+    this->insertHeader("Date", std::string(buf));
+  }
 }

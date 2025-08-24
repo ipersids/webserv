@@ -2,8 +2,8 @@
  * @file HttpRequest.cpp
  * @brief HTTP Request storage and representation class
  * @author Julia Persidskaia (ipersids)
- * @date 2025-07-30
- * @version 1.0
+ * @date 2025-08-22
+ * @version 2.0
  *
  */
 
@@ -12,14 +12,21 @@
 // Constructor and destructor
 
 HttpRequest::HttpRequest()
-    : _method_code(HttpMethod::UNKNOWN),
+    : _buffer(""),
+      _parsed_buffer_offset(0),
+      _method_code(HttpMethod::UNKNOWN),
       _method_raw(""),
       _request_target(""),
       _http_version(""),
       _headers(),
       _body(""),
       _body_length(0),
-      _status() {}
+      _state(HttpParsingState::REQUEST_LINE),
+      _is_chanked(false),
+      _expected_chunk_length(0),
+      _is_error(false),
+      _status_code(HttpUtils::HttpStatusCode::I_AM_TEAPOD),
+      _err_message("") {}
 
 HttpRequest::~HttpRequest() { _headers.clear(); }
 
@@ -96,24 +103,16 @@ void HttpRequest::insertHeader(const std::string& field_name,
 void HttpRequest::setBody(const std::string& body) { _body = body; }
 
 /**
- * @brief Set success status
- * @param status_code HTTP status code (optional, default = 200)
- */
-void HttpRequest::setSuccessStatus(HttpUtils::HttpStatusCode status_code) {
-  _status.result = HttpRequestResult::SUCCESS;
-  _status.status_code = status_code;
-}
-
-/**
  * @brief Set error status
  * @param error_msg Error message
  * @param error_code HTTP error code
  */
 void HttpRequest::setErrorStatus(const std::string& error_msg,
                                  HttpUtils::HttpStatusCode error_code) {
-  _status.result = HttpRequestResult::ERROR;
-  _status.message = error_msg;
-  _status.status_code = error_code;
+  _state = HttpParsingState::COMPLETE;
+  _is_error = true;
+  _err_message = error_msg;
+  _status_code = error_code;
 }
 
 /**
@@ -122,6 +121,22 @@ void HttpRequest::setErrorStatus(const std::string& error_msg,
  */
 void HttpRequest::setBodyLength(size_t content_length) {
   _body_length = content_length;
+}
+
+void HttpRequest::appendBuffer(const std::string& data) {
+  _buffer.append(data);
+
+  if (_parsed_buffer_offset >= PARSED_OFFSET_THRESHOLD) {
+    eraseParsedBuffer();
+  }
+}
+
+void HttpRequest::setChunkedStatus(bool is_chanked) {
+  _is_chanked = is_chanked;
+}
+
+void HttpRequest::setExpectedChunkLength(size_t expected_length) {
+  _expected_chunk_length = expected_length;
 }
 
 // Getters
@@ -194,29 +209,74 @@ const std::string& HttpRequest::getBody(void) const { return _body; }
  */
 size_t HttpRequest::getBodyLength(void) const { return _body_length; }
 
-/**
- * @brief Get request status
- * @return const HttpRequestState& Current request state
- */
-const HttpRequestState& HttpRequest::getStatus(void) const { return _status; }
-
-/**
- * @brief Check if request is valid
- * @return true if request parsed successfully, false otherwise
- */
-bool HttpRequest::isValid(void) const {
-  return _status.result == HttpRequestResult::SUCCESS;
+std::string_view HttpRequest::getUnparsedBuffer(void) const {
+  if (_parsed_buffer_offset >= _buffer.size()) {
+    return std::string_view{};
+  }
+  return std::string_view{_buffer}.substr(_parsed_buffer_offset);
 }
 
-// Helpers
+void HttpRequest::eraseParsedBuffer(size_t bytes) {
+  size_t amount = (bytes == 0) ? _parsed_buffer_offset
+                               : std::min(bytes, _parsed_buffer_offset);
 
-/**
- * @brief Constructor for HttpRequestState
- * @param res Result type
- * @param msg Status message
- * @param code Status code
- */
-HttpRequestState::HttpRequestState(HttpRequestResult res,
-                                   const std::string& msg,
-                                   HttpUtils::HttpStatusCode code)
-    : result(res), message(msg), status_code(code) {}
+  _buffer.erase(0, amount);
+  _parsed_buffer_offset -= amount;
+}
+
+void HttpRequest::commitParsedBytes(size_t bytes) {
+  _parsed_buffer_offset += bytes;
+}
+
+bool HttpRequest::isErrorStatusCode(void) const {
+  return _state == HttpParsingState::COMPLETE && _is_error;
+}
+
+void HttpRequest::setParsingState(HttpParsingState state) {
+  _state = state;
+  if (state == HttpParsingState::COMPLETE) {
+    _buffer.clear();
+    _parsed_buffer_offset = 0;
+  } else if (_parsed_buffer_offset >= PARSED_OFFSET_THRESHOLD) {
+    eraseParsedBuffer();
+  }
+}
+
+HttpParsingState HttpRequest::getParsingState(void) const { return _state; }
+
+bool HttpRequest::getChunkedStatus(void) const { return _is_chanked; }
+
+size_t HttpRequest::getExpectedChunkLength(void) const {
+  return _expected_chunk_length;
+}
+
+void HttpRequest::appendBody(std::string&& data) {
+  _body_length += data.length();
+  _body += std::move(data);
+}
+
+HttpUtils::HttpStatusCode HttpRequest::getStatusCode(void) const {
+  return _status_code;
+}
+
+const std::string& HttpRequest::getErrorMessage(void) const {
+  return _err_message;
+}
+
+void HttpRequest::reset(void) {
+  _buffer.clear();
+  _parsed_buffer_offset = 0;
+  _method_code = HttpMethod::UNKNOWN;
+  _method_raw.clear();
+  _request_target.clear();
+  _http_version.clear();
+  _headers.clear();
+  _body.clear();
+  _body_length = 0;
+  _state = HttpParsingState::REQUEST_LINE;
+  _is_chanked = false;
+  _expected_chunk_length = 0;
+  _is_error = false;
+  _status_code = HttpUtils::HttpStatusCode::I_AM_TEAPOD;
+  _err_message.clear();
+}

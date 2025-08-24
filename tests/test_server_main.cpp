@@ -1,14 +1,3 @@
-/**
- * @file test_server_main.cpp
- * @brief Test HTTP server implementation using epoll for event-driven I/O
- * @author Julia Persidskaia (ipersids)
- * @date 2025-08-12
- * @version 1.0
- *
- * @note This is a test implementation and should not be used in production
- *
- */
-
 #include <netinet/in.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -23,7 +12,7 @@
 #include "Webserv.hpp"
 
 /// @brief Maximum number of pending connections in listen queue
-#define WEBSERV_MAX_PENDING_CONNECTIONS 3
+#define WEBSERV_MAX_PENDING_CONNECTIONS 20
 /// @brief Maximum number of events to process in single epoll_wait call
 #define WEBSERV_MAX_EVENTS 10
 /// @brief Timeout for epoll_wait in seconds
@@ -43,7 +32,6 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-
     int retval = server.createConfig(argv);
     if (retval) return retval;
 
@@ -55,11 +43,5 @@ int main(int argc, char **argv) {
 
 
   server.run();
-  
-
- 
-
-
-
 }
 

@@ -30,12 +30,19 @@
 *.exe
 *.out
 *.app
-test
 webserv
+ubuntu_tester
+tester
+ubuntu_cgi_tester
+cgi_tester
 
 # temporary directories
 obj/*
 logs/*
+# docs/*
+docs/fusion_web/uploads/*
+!docs/fusion_web/uploads/upload.html
+tests/test-configs/test_engnx.conf
 
 # VS Compiled
 .vscode/*

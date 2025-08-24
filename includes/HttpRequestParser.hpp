@@ -2,8 +2,8 @@
  * @file HttpRequestParser.hpp
  * @brief HTTP Request parsing and handling class
  * @author Julia Persidskaia (ipersids)
- * @date 2025-07-30
- * @version 1.0
+ * @date 2025-08-22
+ * @version 2.0
  *
  * Handles parsing and validation of incoming HTTP/1.1 requests.
  * Extracts method, URI, headers, and body from raw request data.
@@ -57,34 +57,31 @@
 #include "HttpRequest.hpp"
 #include "HttpUtils.hpp"
 
-// return values
 #define PARSE_SUCCESS 0
 #define PARSE_ERROR 128
+#define MAX_REQUEST_TARGET_LENGTH 2048
 
-class HttpRequestParser {
- public:
-  HttpRequestParser();
-  ~HttpRequestParser() = default;
-  HttpRequestParser& operator=(const HttpRequestParser& other) = delete;
-  HttpRequestParser(const HttpRequestParser& other) = delete;
+namespace HttpRequestParser {
 
-  int parseRequest(const std::string& raw_request, HttpRequest& request);
+enum class Status { WAIT_FOR_DATA, CONTINUE, DONE, ERROR };
 
- private:
-  static const size_t MAX_REQUEST_TARGET_LENGTH = 2048;
-  static const size_t MAX_REQUEST_BODY_SIZE = 100 * 1024 * 1024;  // 100MB
+Status parseRequest(const std::string& data, HttpRequest& request);
 
- private:
-  int parseRequestLine(std::string_view request_line, HttpRequest& request);
-  int parseRequestHeaders(std::string_view headers, HttpRequest& request);
-  int parseRequestHeaderLine(std::string_view header, HttpRequest& request);
-  int parseRequestBody(std::string_view body, HttpRequest& request);
+Status parseRequestLine(HttpRequest& request);
+Status parseRequestHeaders(HttpRequest& request);
+Status parseRequestHeaderLine(std::string_view header, HttpRequest& request);
+Status parseRequestBody(HttpRequest& request);
+Status parseRequestChunkedBodySize(HttpRequest& request);
+Status parseRequestChunkedBodyData(HttpRequest& request);
+Status parseRequestChunkedBodyTrailer(HttpRequest& request);
 
-  bool validateRequestTarget(const std::string& terget, HttpRequest& request);
-  bool validateHttpVersion(const std::string& version, HttpRequest& request);
-  bool validateHeaderField(const std::string& field);
-  bool validateAndTrimHeaderValue(std::string& value);
-  bool validateTokenChar(char ch);
-};
+bool validateRequestTarget(const std::string& terget, HttpRequest& request);
+bool validateHttpVersion(const std::string& version, HttpRequest& request);
+bool validateHeaderField(const std::string& field);
+bool validateAndTrimHeaderValue(std::string& value);
+bool validateTokenChar(char ch);
+bool validateHeadersSetup(HttpRequest& request);
+
+}  // namespace HttpRequestParser
 
 #endif  // _HTTP_REQUEST_PARSER_HPP
