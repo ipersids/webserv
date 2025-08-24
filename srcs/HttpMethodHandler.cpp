@@ -87,6 +87,7 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
     return response;
   }
 
+  /// @todo add warning lod about body
   // perform method GET, POST or DELETE or give error
   const HttpMethod method_code = request.getMethodCode();
   switch (method_code) {

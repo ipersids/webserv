@@ -2,8 +2,8 @@
  * @file HttpManager.hpp
  * @brief Manages HTTP request processing and response generation.
  * @author Julia Persidskaia (ipersids)
- * @date 2025-08-13
- * @version 1.0
+ * @date 2025-08-22
+ * @version 2.0
  *
  * The HttpManager class coordinates HTTP request handling and response
  * creation.
@@ -28,7 +28,6 @@
 
 class HttpResponse;
 class HttpRequest;
-class HttpRequestParser;
 class Logger;
 
 /**
@@ -64,7 +63,6 @@ class HttpManager {
 
  private:
   const ConfigParser::ServerConfig& _config;
-  HttpRequestParser _parser;
   HttpMethodHandler _method_handler;
 
  private:
