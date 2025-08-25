@@ -6,11 +6,11 @@
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/20 13:59:37 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/07/20 14:03:12 by jrimpila         ###   ########.fr       */
+/*   Updated: 2025/08/15 15:31:15 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../includes/webserv.hpp"
+#include "../includes/Webserv.hpp"
 
 int throwError(const char *str)
 {

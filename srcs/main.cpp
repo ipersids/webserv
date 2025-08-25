@@ -6,11 +6,11 @@
 /*   By: jrimpila <jrimpila@student.hive.fi>        +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/18 13:48:48 by jrimpila          #+#    #+#             */
-/*   Updated: 2025/07/26 11:47:11 by jrimpila         ###   ########.fr       */
+/*   Updated: 2025/08/15 15:31:24 by jrimpila         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../includes/webserv.hpp"
+#include "../includes/Webserv.hpp"
 
 static sockaddr_in init();
 

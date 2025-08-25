@@ -18,6 +18,7 @@ SRCS		:= utils.cpp data.cpp ConfigParser.cpp Parser.cpp Tokenizer.cpp \
 			HttpResponse.cpp \
 			Logger.cpp \
 			HttpManager.cpp \
+			Webserv.cpp \
 			HttpMethodHandler.cpp
 SRC_MAIN	:= main.cpp
 
