@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <iostream>
 #include <map>
+#include <sstream>
 #include <string>
 
 #include "HttpUtils.hpp"
@@ -66,7 +67,7 @@ class HttpRequest {
   void setParsingState(HttpParsingState state);
   void setChunkedStatus(bool is_chanked);
   void setExpectedChunkLength(size_t expected_length);
-  void appendBuffer(const std::string& data);
+  void appendBuffer(std::string&& data);
   void commitParsedBytes(size_t bytes);
   void appendBody(std::string&& data);
 
@@ -83,6 +84,7 @@ class HttpRequest {
   size_t getExpectedChunkLength(void) const;
   HttpUtils::HttpStatusCode getStatusCode(void) const;
   const std::string& getErrorMessage(void) const;
+  std::string getRequestLine(void) const;
 
   bool hasHeader(const std::string& field_name) const;
   bool isErrorStatusCode(void) const;

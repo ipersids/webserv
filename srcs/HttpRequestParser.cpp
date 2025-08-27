@@ -31,12 +31,12 @@
  * HttpRequestParser::Status::INPROGRESS
  */
 HttpRequestParser::Status HttpRequestParser::parseRequest(
-    const std::string& data, HttpRequest& request) {
+    std::string&& data, HttpRequest& request) {
   if (data.empty()) {
     return HttpRequestParser::Status::WAIT_FOR_DATA;
   }
 
-  request.appendBuffer(data);
+  request.appendBuffer(std::move(data));
 
   HttpRequestParser::Status status;
   while (true) {

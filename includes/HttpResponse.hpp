@@ -33,47 +33,45 @@ class HttpRequest;
 
 class HttpResponse {
  public:
-  HttpResponse(
-      const HttpUtils::HttpStatusCode& code = HttpUtils::HttpStatusCode::OK,
-      const std::string& message = "");
+  HttpResponse();
   ~HttpResponse();
   HttpResponse& operator=(const HttpResponse& other);
   HttpResponse(const HttpResponse& other);
 
-  void setHttpVersion(const std::string& version);
   void setStatusCode(const HttpUtils::HttpStatusCode& code);
+  void setBody(const std::string& body,
+               const std::string& content_type = "text/plain");
+  void setContentType(const std::string& content_type);
+  void setConnectionHeader(const std::string& request_connection,
+                           const std::string& request_http_version);
   void insertHeader(const std::string& field_name, const std::string& value);
-  void setBody(const std::string& body);
 
+  void setErrorPageBody(const ConfigParser::ServerConfig& server_config);
   void setErrorResponse(const HttpUtils::HttpStatusCode& code,
-                        const std::string& msg);
+                        const std::string& message);
 
-  void removeHeader(const std::string& field_name);
+  bool isError(void) const;
+  bool isKeepAliveConnection(void) const;
 
-  const std::string& getHttpVersion(void) const;
-  const HttpUtils::HttpStatusCode& getStatusCode(void) const;
-  const std::string& getReasonPhrase(void) const;
-  const std::string& getHeader(const std::string& field_name) const;
   const std::string& getBody(void) const;
+  HttpUtils::HttpStatusCode getStatusCode(void) const;
+  std::string getStatusLine(void) const;
 
   std::string convertToString(void);
 
-  bool hasHeader(const std::string& field_name) const;
-
  private:
-  // Status Line: https://datatracker.ietf.org/doc/html/rfc7230#autoid-18
-  std::string _http_version;
   HttpUtils::HttpStatusCode _status_code;
-  std::string _reason_phrase;
-  // Header Fields: https://datatracker.ietf.org/doc/html/rfc7231#autoid-101
   std::map<std::string, std::string> _headers;
-  // Response Body
   std::string _body;
+  std::string _content_type;
+  bool _is_error_response;
+  bool _is_keep_alive_connection;
 
  private:
-  std::string whatReasonPhrase(const HttpUtils::HttpStatusCode& code);
+  std::string whatReasonPhrase(const HttpUtils::HttpStatusCode& code) const;
+  std::string whatDateGMT(void);
   std::string capitalizeHeaderFieldName(const std::string& field_name);
-  void setCommonHeaders(void);
+  void setDefaultCatErrorPage(void);
 };
 
 #endif  // _HTTP_RESPONSE_HPP
