@@ -24,6 +24,12 @@
 
 #define CRLF_LENGTH 2
 
+#ifdef DEBUG
+#define DBG(x) std::cout << "[DEBUG] " << x << std::endl
+#else
+#define DBG(x)
+#endif
+
 namespace HttpUtils {
 
 // Response Status Codes:
@@ -103,9 +109,8 @@ bool isMethodAllowed(const ConfigParser::LocationConfig& location,
                      const std::string& method);
 
 const std::string getMIME(const std::string& path);
-const std::string getExtension(const std::string& content_type);
 
-bool isRawRequestComplete(const std::string& raw_request);
+const std::string getExtension(const std::string& content_type);
 }  // namespace HttpUtils
 
 #endif  // _HTTP_UTILS_HPP

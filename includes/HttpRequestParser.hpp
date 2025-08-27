@@ -65,7 +65,7 @@ namespace HttpRequestParser {
 
 enum class Status { WAIT_FOR_DATA, CONTINUE, DONE, ERROR };
 
-Status parseRequest(const std::string& data, HttpRequest& request);
+Status parseRequest(std::string&& data, HttpRequest& request);
 
 Status parseRequestLine(HttpRequest& request);
 Status parseRequestHeaders(HttpRequest& request);
