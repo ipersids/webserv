@@ -32,6 +32,7 @@ class Connection;
 /// @brief Application buffer: for reading client data (16 KB)
 #define WEBSERV_BUFFER_SIZE 16384
 
+
 class Webserv {
  public:
   Webserv() = delete;
@@ -48,8 +49,8 @@ class Webserv {
 
  private:
   ConfigParser::Config _config;
-  std::unordered_map<int, int> _port_to_servfd;
-  std::unordered_map<int, std::vector<ConfigParser::ServerConfig *>>
+  std::unordered_map<int, int> _port_to_servfd; //port and the matching fd
+  std::unordered_map<int, std::vector<ConfigParser::ServerConfig *>> //fd and the configs, there might be multiple
       _servfd_to_config;
   int _epoll_fd;
   std::unordered_map<int, std::unique_ptr<Connection>> _connections;
