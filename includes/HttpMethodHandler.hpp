@@ -31,36 +31,34 @@
 #include "HttpResponse.hpp"
 #include "Logger.hpp"
 #include "config.hpp"
+#include "CgiHandler.hpp"
 
 class HttpRequest;
 class HttpResponse;
 
 /**
- * @class HttpMethodHandler
+ * @namespace HttpMethodHandler
  * @brief Processes HTTP method requests and generates responses
  *
  * Key responsibilities:
  * - Process HTTP GET requests (static files, directory listings)
- * - @todo Handle HTTP POST requests (file uploads)
- * - @todo Manage HTTP DELETE requests (file deletion)
+ * - Handle HTTP POST requests (file uploads)
+ * - Manage HTTP DELETE requests (file deletion)
  * - Serve static files with appropriate MIME types
  * - Generate directory listings when auto-index is enabled
+ * - CGI
  *
  * @see Common helper functions in srcs/HttpUtils.cpp
  */
 class HttpMethodHandler {
  public:
-  HttpMethodHandler() = delete;
+  HttpMethodHandler() = default;
   HttpMethodHandler& operator=(const HttpMethodHandler& other) = delete;
   HttpMethodHandler(const HttpMethodHandler& other) = delete;
   ~HttpMethodHandler() = default;
-  HttpMethodHandler(const ConfigParser::ServerConfig& config);
 
-  HttpResponse processMethod(const HttpRequest& request);
-
- private:
-  // variables
-  const ConfigParser::ServerConfig& _config;
+  HttpResponse processMethod(const HttpRequest& request,
+                             const ConfigParser::ServerConfig& config);
 
  protected:
   // main functions
@@ -70,7 +68,7 @@ class HttpMethodHandler {
                                 const HttpRequest& request);
   HttpResponse handleDeleteMethod(const std::string& path);
 
- protected:
+ private:
   // helper functions
   HttpResponse serveStaticFile(const std::string& path);
   HttpResponse serveDirectoryContent(const std::string& path,
@@ -81,7 +79,6 @@ class HttpMethodHandler {
   bool isAllowedFileType(const std::string& extension);
   std::string generateFileName(const std::string& extension);
 
- protected:
   HttpResponse handleMultipartFileUpload(const HttpRequest& request,
                                          const std::string& path,
                                          const std::string& content_type);

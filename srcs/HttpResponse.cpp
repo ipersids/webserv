@@ -1,28 +1,12 @@
 #include "HttpResponse.hpp"
 
-HttpResponse::HttpResponse(const HttpUtils::HttpStatusCode& code,
-                           const std::string& message)
-    : _http_version("HTTP/1.1"),
-      _status_code(code),
-      _reason_phrase(whatReasonPhrase(code)),
+HttpResponse::HttpResponse()
+    : _status_code(HttpUtils::HttpStatusCode::I_AM_TEAPOD),
       _headers(),
-      _body(message) {
-  // handle error codes
-  if (static_cast<int>(code) >= 400) {
-    setBody(R"({"error": ")" +
-            (message.empty() ? R"("uknown error")" : message) + R"("})");
-  }
-
-  if (code == HttpUtils::HttpStatusCode::UKNOWN) {
-    setStatusCode(HttpUtils::HttpStatusCode::I_AM_TEAPOD);
-    _reason_phrase = whatReasonPhrase(_status_code);
-  }
-
-  if (!_body.empty()) {
-    size_t content_length = _body.length();
-    insertHeader("Content-Length", std::to_string(content_length));
-  }
-}
+      _body(""),
+      _content_type(""),
+      _is_error_response(false),
+      _is_keep_alive_connection(true) {}
 
 HttpResponse& HttpResponse::operator=(const HttpResponse& other) {
   if (this == &other) {
@@ -32,9 +16,10 @@ HttpResponse& HttpResponse::operator=(const HttpResponse& other) {
   this->_body = other._body;
   this->_headers.clear();
   this->_headers = other._headers;
-  this->_http_version = other._http_version;
-  this->_reason_phrase = other._reason_phrase;
   this->_status_code = other._status_code;
+  this->_content_type = other._content_type;
+  this->_is_error_response = other._is_error_response;
+  this->_is_keep_alive_connection = other._is_keep_alive_connection;
 
   return *this;
 }
@@ -45,18 +30,12 @@ HttpResponse::~HttpResponse() { _headers.clear(); }
 
 // Setters
 
-void HttpResponse::setHttpVersion(const std::string& version) {
-  _http_version = version;
-}
-
 void HttpResponse::setStatusCode(const HttpUtils::HttpStatusCode& code) {
   if (code == HttpUtils::HttpStatusCode::UKNOWN) {
     setStatusCode(HttpUtils::HttpStatusCode::I_AM_TEAPOD);
-    setBody(R"({"error": "uknown error"})");
   } else {
     _status_code = code;
   }
-  _reason_phrase = whatReasonPhrase(_status_code);
 }
 
 void HttpResponse::insertHeader(const std::string& field_name,
@@ -64,75 +43,113 @@ void HttpResponse::insertHeader(const std::string& field_name,
   std::string lowercase_name = HttpUtils::toLowerCase(field_name);
   auto it = _headers.find(lowercase_name);
   if (it != _headers.end()) {
-    it->second += "," + value;
-  } else {
-    _headers.insert({lowercase_name, value});
+    it->second = value;
   }
 }
 
-void HttpResponse::setBody(const std::string& body) {
+void HttpResponse::setBody(const std::string& body,
+                           const std::string& content_type) {
   _body = body;
-  size_t content_length = _body.length();
-  removeHeader("Content-Length");
-  insertHeader("Content-Length", std::to_string(content_length));
+  _content_type = content_type;
+}
+
+void HttpResponse::setContentType(const std::string& content_type) {
+  _content_type = content_type;
+}
+
+void HttpResponse::setConnectionHeader(
+    const std::string& request_connection,
+    const std::string& request_http_version) {
+  if (_status_code == HttpUtils::HttpStatusCode::BAD_REQUEST ||
+      _status_code == HttpUtils::HttpStatusCode::REQUEST_TIMEOUT ||
+      _status_code >= HttpUtils::HttpStatusCode::LENGTH_REQUIRED ||
+      request_connection == "close" ||
+      (request_http_version == "HTTP/1.0" &&
+       request_connection != "keep-alive")) {
+    insertHeader("Connection", "close");
+    _is_keep_alive_connection = false;
+  } else {
+    insertHeader("Connection", "keep-alive");
+    _is_keep_alive_connection = true;
+  }
 }
 
 void HttpResponse::setErrorResponse(const HttpUtils::HttpStatusCode& code,
-                                    const std::string& msg) {
+                                    const std::string& message) {
   setStatusCode(code);
-  setBody(R"({"error": ")" + msg + R"("})");
-  if (this->hasHeader("Content-Type")) {
-    removeHeader("Content-Type");
+  setBody(message);
+  _is_error_response = true;
+}
+
+void HttpResponse::setErrorPageBody(
+    const ConfigParser::ServerConfig& server_config) {
+  std::map<int, std::string>::const_iterator it =
+      server_config.error_pages.find(static_cast<int>(_status_code));
+  if (it == server_config.error_pages.end()) {
+    setDefaultCatErrorPage();
+    return;
   }
-  insertHeader("Content-Type", "application/json");
-  _reason_phrase = whatReasonPhrase(code);
-}
 
-// Getters
-
-const std::string& HttpResponse::getHttpVersion(void) const {
-  return _http_version;
-}
-
-const HttpUtils::HttpStatusCode& HttpResponse::getStatusCode(void) const {
-  return _status_code;
-}
-
-const std::string& HttpResponse::getReasonPhrase(void) const {
-  return _reason_phrase;
-}
-
-const std::string& HttpResponse::getHeader(
-    const std::string& field_name) const {
-  static const std::string empty_string = "";
-  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
-  auto it = _headers.find(lowercase_name);
-  if (it != _headers.end()) {
-    return it->second;
+  std::string path = server_config.root;
+  if (path.empty() || path.back() != '/') {
+    path += "/";
   }
-  return empty_string;
+  if (it->second.empty() || it->second[0] != '/') {
+    path += it->second;
+  } else {
+    path += ((it->second.length() >= 2) ? it->second.substr(1) : "");
+  }
+
+  std::string tmp_body = "";
+  if (std::filesystem::exists(path) && std::filesystem::is_regular_file(path) &&
+      HttpUtils::getFileContent(path, tmp_body) == 0) {
+    setBody(tmp_body, HttpUtils::getMIME(path));
+  } else {
+    setDefaultCatErrorPage();
+  }
 }
 
-const std::string& HttpResponse::getBody(void) const { return _body; }
+void HttpResponse::setDefaultCatErrorPage(void) {
+  std::string cat_url =
+      "https://http.cat/" + std::to_string(static_cast<int>(_status_code));
+  std::string body =
+      "<!DOCTYPE html>\n"
+      "<html>\n"
+      "<head><title>Error " +
+      std::to_string(static_cast<int>(_status_code)) +
+      "</title></head>\n"
+      "<body style='text-align:center; font-family:Arial; "
+      "background-color:black; color:white;'>\n"
+      "<h1>Oooops! </h1>\n"
+      "<p><a href='/' style='color:white;'>Go home!</a></p>\n"
+      "<p>(reason: " +
+      _body + ")</p>\n" + "<img src='" + cat_url + "' alt='HTTP Cat " +
+      std::to_string(static_cast<int>(_status_code)) +
+      "' style='max-width:100%; height:auto; margin:20px;'>\n"
+      "</body></html>";
 
-// Checkers
-
-bool HttpResponse::hasHeader(const std::string& field_name) const {
-  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
-  return _headers.find(lowercase_name) != _headers.end();
+  setBody(body);
+  setContentType("text/html");
 }
 
 // Converter
 
 std::string HttpResponse::convertToString(void) {
   std::ostringstream raw_response;
-
-  this->setCommonHeaders();
-
   // add status line
-  raw_response << _http_version << " " << static_cast<int>(_status_code) << " "
-               << _reason_phrase << "\r\n";
+  raw_response << "HTTP/1.1" << " " << static_cast<int>(_status_code) << " "
+               << whatReasonPhrase(_status_code) << "\r\n";
   // add headers
+  raw_response << "Server: Webserv" << "\r\n"
+               << "Date: " << whatDateGMT() << "\r\n"
+               << "Content-Length: "
+               << (_body.empty() ? "0" : std::to_string(_body.length()))
+               << "\r\n";
+  if (!_body.empty()) {
+    raw_response << "Content-Type: "
+                 << (_content_type.empty() ? "text/plain" : _content_type)
+                 << "\r\n";
+  }
   for (auto it : _headers) {
     raw_response << capitalizeHeaderFieldName(it.first) << ": " << it.second
                  << "\r\n";
@@ -142,10 +159,19 @@ std::string HttpResponse::convertToString(void) {
   return raw_response.str();
 }
 
+std::string HttpResponse::whatDateGMT(void) {
+  std::time_t now = std::time(nullptr);
+  std::tm gmt{};
+  gmtime_r(&now, &gmt);
+  char buf[100];
+  std::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
+  return std::move(std::string(buf));
+}
+
 // Helpers
 
 std::string HttpResponse::whatReasonPhrase(
-    const HttpUtils::HttpStatusCode& code) {
+    const HttpUtils::HttpStatusCode& code) const {
   switch (code) {
     case HttpUtils::HttpStatusCode::CONTINUE:
       return "Continue";
@@ -247,22 +273,21 @@ std::string HttpResponse::capitalizeHeaderFieldName(
   return name;
 }
 
-void HttpResponse::removeHeader(const std::string& field_name) {
-  std::string lowercase_name = HttpUtils::toLowerCase(field_name);
-  _headers.erase(lowercase_name);
+bool HttpResponse::isError(void) const { return _is_error_response; }
+
+bool HttpResponse::isKeepAliveConnection(void) const {
+  return _is_keep_alive_connection;
 }
 
-void HttpResponse::setCommonHeaders(void) {
-  if (!this->hasHeader("Server")) {
-    this->insertHeader("Server", "Webserv");
-  }
+const std::string& HttpResponse::getBody(void) const { return _body; }
 
-  if (!this->hasHeader("Date")) {
-    std::time_t now = std::time(nullptr);
-    std::tm gmt{};
-    gmtime_r(&now, &gmt);
-    char buf[100];
-    std::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
-    this->insertHeader("Date", std::string(buf));
-  }
+HttpUtils::HttpStatusCode HttpResponse::getStatusCode(void) const {
+  return _status_code;
+}
+
+std::string HttpResponse::getStatusLine(void) const {
+  std::stringstream status_line;
+  status_line << "HTTP/1.1 " << static_cast<int>(_status_code) << " "
+              << whatReasonPhrase(_status_code);
+  return std::move(status_line.str());
 }

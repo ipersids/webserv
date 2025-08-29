@@ -123,8 +123,8 @@ void HttpRequest::setBodyLength(size_t content_length) {
   _body_length = content_length;
 }
 
-void HttpRequest::appendBuffer(const std::string& data) {
-  _buffer.append(data);
+void HttpRequest::appendBuffer(std::string&& data) {
+  _buffer += std::move(data);
 
   if (_parsed_buffer_offset >= PARSED_OFFSET_THRESHOLD) {
     eraseParsedBuffer();
@@ -279,4 +279,11 @@ void HttpRequest::reset(void) {
   _is_error = false;
   _status_code = HttpUtils::HttpStatusCode::I_AM_TEAPOD;
   _err_message.clear();
+}
+
+std::string HttpRequest::getRequestLine(void) const {
+  std::stringstream request_line;
+  request_line << getMethod() << " " << getRequestTarget() << " "
+               << getHttpVersion();
+  return std::move(request_line.str());
 }

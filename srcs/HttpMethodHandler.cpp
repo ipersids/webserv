@@ -9,18 +9,6 @@
 
 #include "HttpMethodHandler.hpp"
 
-// constructor
-
-/**
- * @brief Constructs an HttpMethodHandler with the given server configuration
- * @param config Reference to the server configuration object
- *
- * @note The configuration reference must remain valid for the lifetime
- *       of this HttpMethodHandler instance.
- */
-HttpMethodHandler::HttpMethodHandler(const ConfigParser::ServerConfig& config)
-    : _config(config) {}
-
 // public methods
 
 /**
@@ -34,17 +22,17 @@ HttpMethodHandler::HttpMethodHandler(const ConfigParser::ServerConfig& config)
  * body
  * @return HttpResponse object containing the complete response
  */
-HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
+HttpResponse HttpMethodHandler::processMethod(
+    const HttpRequest& request, const ConfigParser::ServerConfig& config) {
   HttpResponse response;
   const std::string uri = request.getRequestTarget();
 
   // find the longest match of location (config) for given target URI
   const ConfigParser::LocationConfig* location =
-      HttpUtils::getLocation(uri, _config);
+      HttpUtils::getLocation(uri, config);
   if (!location) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
-                              "Requested location not found");
-    Logger::error("Requested location not found: " + uri);
+                              "Requested location not found: " + uri);
     return response;
   }
 
@@ -55,17 +43,14 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
               << " bytes) for " << request.getMethod() << " request";
     response.setErrorResponse(HttpUtils::HttpStatusCode::PAYLOAD_TOO_LARGE,
                               error_msg.str());
-    Logger::error(error_msg.str());
     return response;
   }
 
   // check if this location requires redirection to another one
   if (!location->redirect_url.empty()) {
-    response.setStatusCode(HttpUtils::HttpStatusCode::MOVED_PERMANENTLY);
-    response.setBody("Redirecting to " + location->redirect_url);
+    response.setErrorResponse(HttpUtils::HttpStatusCode::MOVED_PERMANENTLY,
+                              "Redirecting to " + location->redirect_url);
     response.insertHeader("Location", location->redirect_url);
-    response.insertHeader("Content-Type", "text/html");
-    Logger::warning("Redirecting " + uri + " to " + location->redirect_url);
     return response;
   }
 
@@ -74,7 +59,7 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
   std::string message = "";
   if (!HttpUtils::isFilePathSecure(file_path, location->root, message)) {
     Logger::warning("Possible security problem " + uri);
-    Logger::error("Failed to resolve uri " + uri + ": " + message);
+    Logger::warning("Failed to resolve uri " + uri + ": " + message);
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
                               "Page/file doesn't exist");
     return response;
@@ -85,6 +70,11 @@ HttpResponse HttpMethodHandler::processMethod(const HttpRequest& request) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::METHOD_NOT_ALLOWED,
                               "Method " + request.getMethod() + " not allowed");
     return response;
+  }
+
+  if (CgiHandler::isCgiRequest(uri, *location)) {
+      Logger::info("Processing CGI request :" + uri);
+      return CgiHandler::execute(request, *location);
   }
 
   /// @todo add warning lod about body
@@ -136,8 +126,7 @@ HttpResponse HttpMethodHandler::handleGetMethod(
   // check if file/directory exists
   if (!std::filesystem::exists(path)) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
-                              "File not found");
-    Logger::error("Requested file doesn't exist: " + path);
+                              "File not found: " + path);
     return response;
   }
 
@@ -164,8 +153,7 @@ HttpResponse HttpMethodHandler::handleGetMethod(
     }
 
     response.setErrorResponse(HttpUtils::HttpStatusCode::FORBIDDEN,
-                              "Access denied");
-    Logger::error("Directory access denied: " + path);
+                              "Access denied: " + path);
     return response;
   }
 
@@ -175,8 +163,7 @@ HttpResponse HttpMethodHandler::handleGetMethod(
     response = serveStaticFile(path);
   } else {
     response.setErrorResponse(HttpUtils::HttpStatusCode::FORBIDDEN,
-                              "Access denied");
-    Logger::error("File access denied: " + path);
+                              "Access denied: " + path);
   }
 
   return response;
@@ -190,8 +177,7 @@ HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path,
   // check if file/directory exists
   if (!std::filesystem::exists(path) || !std::filesystem::is_directory(path)) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
-                              "Upload directory not found");
-    Logger::error("Upload directory doesn't exist: " + path);
+                              "Upload directory not found: " + path);
     return response;
   }
 
@@ -206,7 +192,6 @@ HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path,
     response.setErrorResponse(
         HttpUtils::HttpStatusCode::FORBIDDEN,
         "Uploaded content type is not allowed: " + content_type);
-    Logger::error("Uploaded content type is not allowed: " + extension);
     return response;
   }
 
@@ -216,12 +201,10 @@ HttpResponse HttpMethodHandler::handlePostMethod(const std::string& path,
   if (!saveUploadedFile(path, file_name, request.getBody(), error_msg)) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
                               "Failed to upload file to " + path);
-    Logger::error("Failed to upload file to " + path);
     return response;
   }
 
   response.setStatusCode(HttpUtils::HttpStatusCode::CREATED);
-  response.insertHeader("Content-Length", "0");
   return response;
 }
 
@@ -247,24 +230,21 @@ HttpResponse HttpMethodHandler::handleDeleteMethod(const std::string& path) {
   // check if file/directory exists
   if (!std::filesystem::exists(path)) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
-                              "File not found");
-    Logger::error("Requested file doesn't exist: " + path);
+                              "File not found: " + path);
     return response;
   }
 
   // reject deletion if it is directory
   if (std::filesystem::is_directory(path)) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::CONFLICT,
-                              "Deletion of directory is not allowed");
-    Logger::error("Rejected to delete directory: " + path);
+                              "Deletion of directory is not allowed: " + path);
     return response;
   }
 
   // try to delete file
   if (!std::filesystem::remove(path)) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::FORBIDDEN,
-                              "Permission denied");
-    Logger::error("Rejected to delete file: " + path);
+                              "Rejected to delete file: " + path);
     return response;
   }
 
@@ -293,14 +273,11 @@ HttpResponse HttpMethodHandler::serveStaticFile(const std::string& path) {
   if (HttpUtils::getFileContent(path, body) == -1) {
     Logger::error(body + ": " + path);
     response.setErrorResponse(HttpUtils::HttpStatusCode::FORBIDDEN,
-                              "Access denied");
+                              "Access denied: " + path);
     return response;
   }
-  response.setBody(body);
+  response.setBody(body, HttpUtils::getMIME(path));
   response.setStatusCode(HttpUtils::HttpStatusCode::OK);
-  response.insertHeader("Content-Type", HttpUtils::getMIME(path));
-  Logger::info("Served file: " + path + " (" +
-               response.getHeader("Content-Length") + " bytes)");
   return response;
 }
 
@@ -372,13 +349,11 @@ HttpResponse HttpMethodHandler::serveDirectoryContent(const std::string& path,
          << "</html>";
 
     response.setStatusCode(HttpUtils::HttpStatusCode::OK);
-    response.insertHeader("Content-Type", "text/html");
-    response.setBody(html.str());
-    Logger::info("Generated directory listing for: " + path);
+    response.setBody(html.str(), "text/html");
     return response;
 
   } catch (const std::exception& e) {
-    Logger::error("Error listing directory " + path + ": " + e.what());
+    Logger::warning("Error listing directory " + path + ": " + e.what());
     response.setErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
                               "Internal server error");
   }
@@ -397,8 +372,6 @@ HttpResponse HttpMethodHandler::handleMultipartFileUpload(
     response.setErrorResponse(
         HttpUtils::HttpStatusCode::BAD_REQUEST,
         "Missing or invalid boundary parameter in Content-Type");
-    Logger::error("Invalid multipart boundary in Content-Type: : " +
-                  content_type);
     return response;
   }
 
@@ -458,8 +431,6 @@ HttpResponse HttpMethodHandler::handleMultipartFileUpload(
       response.setErrorResponse(
           HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
           "Failed to upload file: " + filename + " (" + error_msg + ")");
-      Logger::error("Failed to upload file: " + filename + " (" + error_msg +
-                    ")");
       return response;
     }
     Logger::info("Uploaded file: " + filename + " (" +
@@ -472,13 +443,11 @@ HttpResponse HttpMethodHandler::handleMultipartFileUpload(
   if (file_count == 0) {
     response.setErrorResponse(HttpUtils::HttpStatusCode::NOT_FOUND,
                               "No files found in multipart upload");
-    Logger::error("No files found in multipart upload");
     return response;
   }
 
   response.setStatusCode(HttpUtils::HttpStatusCode::CREATED);
-  response.insertHeader("Content-Length", "0");
-  response.setBody(generateUploadSuccessHtml(saved_files));
+  response.setBody(generateUploadSuccessHtml(saved_files), "text/html");
   return response;
 }
 
