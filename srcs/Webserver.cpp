@@ -1,5 +1,6 @@
 #include "Webserver.hpp"
 #include "defaults.hpp"
+#include "config.hpp"
 
 // Constructor and destructor
 
@@ -68,6 +69,29 @@ const ConfigParser::ServerConfig &Webserv::getServerConfigs(
 	(void)host;
 	/// 1. find config vector from _servfd_to_config using server_socket_fd
 	///    - if there is no one (what is almost impossible) -> throw
+	
+	size_t colon_pos = host.find(':');
+	if (colon_pos != std::string_view::npos) {
+    std::string_view myHost = host.substr(0, colon_pos); //avoids copying
+
+  
+
+
+	try {
+		auto it = _servfd_to_config.find(server_socket_fd);
+		for (auto it2 = it->second.begin(); it2 != it->second.end(); it++)
+		{
+			if (it2->servernames.find(myHost))
+		}
+	}
+	catch(...)
+	{
+		throw std::runtime_error("Config is illegal");
+	}
+	
+
+	}
+
 	/// 2. parse name from name:host (ex. localhost:8002)
 	/// 3. iterate vector with servers configs
 	///    - if name in server_names -> return server config
@@ -102,9 +126,7 @@ void Webserv::openServerSockets(void) {
 				Logger::shutdown();
 			}
 			_port_to_servfd.emplace(it->port, server_socketfd);
-			_servfd_to_config.emplace(it->port, std::vector<ConfigParser::ServerConfig*>{ &*it }
-);
-
+			_servfd_to_config.emplace(it->port, std::vector<ConfigParser::ServerConfig*>{ &*it });
 		}
 		else 
 		{
@@ -183,9 +205,46 @@ void Webserv::addServerSocketsToEpoll(void) {
 void Webserv::addConnection(int server_socket_fd) {
 	(void)server_socket_fd;
 	/// 1. create client socket fd
+
+	int client_socketfd = -1;
+	struct sockaddr_in cli_addr;
+	size_t client_socklen = sizeof(cli_addr);
+
 	/// 2. accept connection
+	client_socketfd = accept(server_socket_fd, (struct sockaddr *)&cli_addr,
+                                 (socklen_t *)&client_socklen);
+        if (client_socketfd == -1) {
+          Logger::error("Failed to accept connection: " +
+                        std::string(strerror(errno)));
+          throw std::runtime_error("Creating client socket failed");
+        }
+	Logger::info("New connection accepted on fd " +
+                     std::to_string(client_socketfd));	
+
 	/// 3. add to epoll
-	/// 4. create connection and add it as unique poiner to _connections
+
+		struct epoll_event client_ev;
+
+        client_ev.events = EPOLLIN | EPOLLOUT;
+        client_ev.data.fd = client_socketfd;
+        if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, client_socketfd, &client_ev) ==
+            -1) {
+          Logger::error("Failed to add client to epoll");
+          close(client_socketfd);
+          throw std::runtime_error("Adding to epoll failed");
+        }
+
+			/// 4. create connection and add it as unique poiner to _connections
+		try {
+		auto newConnection = std::make_unique<Connection>(client_socketfd, server_socket_fd, *this, _method_handler);
+		
+		_connections[client_socketfd] = std::move(newConnection);
+		}
+		catch (...)
+		{
+			throw std::runtime_error("Creating and assigning unique ptr failed");
+		}
+	
 }
 
 void Webserv::handleConnection(int client_socket_fd) {
@@ -198,19 +257,44 @@ void Webserv::handleConnection(int client_socket_fd) {
 	///    Connection class)
 }
 
+
 void Webserv::cleanupTimeOutConnections(void) {
 	/// 1. iterate _connections
 	/// 2. call Connection method isTimedOut(...)
 	///    - if tru -> erase connection from _connections
 	///    - else -> continue
+	auto it = _connections.begin();
+	while(it != _connections.end())
+	{
+		if (it->second->isTimedOut(std::chrono::seconds(WEBSERV_CONNECTION_TIMEOUT_SEC)) == true)
+		{
+			it = _connections.erase(it);
+		}
+		else 
+			it++;
+	}
 }
 
+//seems unnecessary
 void Webserv::handleKeepAliveConnection(int client_socket_fd) {
 	(void)client_socket_fd;
 	/// 1. iterate _connections
 	/// 2. call Connection method keepAlive(...)
 	///    - if tru -> erase connection from _connections
 	///    - else -> continue
+
+	auto it = _connections.begin();
+	while(it != _connections.end())
+	{
+		if (it->second->keepAlive() == true)
+		{
+			it = _connections.erase(it);
+		}
+		else 
+			it++;
+	}
+
+	//so is it meant to be called for all or just for that fd?
 }
 
 void Webserv::setServerSocketOptions(int server_socket_fd) {
