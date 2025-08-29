@@ -72,6 +72,11 @@ HttpResponse HttpMethodHandler::processMethod(
     return response;
   }
 
+  if (CgiHandler::isCgiRequest(uri, *location)) {
+      Logger::info("Processing CGI request :" + uri);
+      return CgiHandler::execute(request, *location);
+  }
+
   /// @todo add warning lod about body
   // perform method GET, POST or DELETE or give error
   const HttpMethod method_code = request.getMethodCode();
