@@ -19,7 +19,8 @@ SRCS		:= ConfigParser.cpp Parser.cpp Tokenizer.cpp \
 			Logger.cpp \
 			HttpMethodHandler.cpp \
 			Connection.cpp \
-			Webserver.cpp
+			Webserver.cpp \
+			CgiHandler.cpp
 SRC_MAIN	:= main.cpp
 
 OBJS		:= $(addprefix $(OBJ_DIR)/, $(SRCS:.cpp=.o))

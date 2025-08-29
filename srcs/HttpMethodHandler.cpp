@@ -73,11 +73,10 @@ HttpResponse HttpMethodHandler::processMethod(
   }
 
   if (CgiHandler::isCgiRequest(uri, *location)) {
-      Logger::info("Processing CGI request :" + uri);
-      return CgiHandler::execute(request, *location);
+    Logger::info("Processing CGI request :" + uri);
+    return CgiHandler::execute(request, *location);
   }
 
-  /// @todo add warning lod about body
   // perform method GET, POST or DELETE or give error
   const HttpMethod method_code = request.getMethodCode();
   switch (method_code) {
@@ -400,6 +399,14 @@ HttpResponse HttpMethodHandler::handleMultipartFileUpload(
 
     std::string filename =
         getMultipartFileName(body, body_part_start, header_end);
+    std::string extension =
+        std::filesystem::path(filename).extension().string();
+    if (!isAllowedFileType(extension)) {
+      response.setErrorResponse(
+          HttpUtils::HttpStatusCode::FORBIDDEN,
+          "Uploaded content type is not allowed: " + filename);
+      return response;
+    }
 
     if (filename.empty()) {
       body_part_start = header_end + 4;
