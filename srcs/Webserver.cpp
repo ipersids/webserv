@@ -70,27 +70,44 @@ const ConfigParser::ServerConfig &Webserv::getServerConfigs(
 	/// 1. find config vector from _servfd_to_config using server_socket_fd
 	///    - if there is no one (what is almost impossible) -> throw
 	
+	
 	size_t colon_pos = host.find(':');
+
 	if (colon_pos != std::string_view::npos) {
-    std::string_view myHost = host.substr(0, colon_pos); //avoids copying
-
-  
-
-
-	try {
-		auto it = _servfd_to_config.find(server_socket_fd);
-		for (auto it2 = it->second.begin(); it2 != it->second.end(); it++)
+    	std::string_view myHost = host.substr(0, colon_pos); //avoids copying
+	
+		for (auto it = _servfd_to_config.begin(); it != _servfd_to_config.end(); it++)
 		{
-			if (it2->servernames.find(myHost))
+			for (auto it2 = (it)->second.begin(); it2 != it->second.end(); it2++)
+			{
+				std::vector<std::string> &helper = (*it2)->server_names;
+				for (auto it3 = helper.begin(); it3 != helper.end(); it3++)
+				{
+					if (*(it3) == myHost)
+						return *(*it2);
+				}
+			}
+
+		}
+		int myPort = std::stoi(host.substr(colon_pos + 1));
+
+		for (auto it = _servfd_to_config.begin(); it != _servfd_to_config.end(); it++)
+		{
+			for (auto it2 = (it)->second.begin(); it2 != it->second.end(); it2++)
+			{
+				if ((*it2)->port == myPort)
+					return *(*it2);
+			}
 		}
 	}
-	catch(...)
-	{
-		throw std::runtime_error("Config is illegal");
-	}
-	
 
+	if (_config.servers.empty()) {
+    throw std::runtime_error("No server configurations available");
 	}
+	return *_config.servers.begin();
+
+
+	
 
 	/// 2. parse name from name:host (ex. localhost:8002)
 	/// 3. iterate vector with servers configs
@@ -101,7 +118,7 @@ const ConfigParser::ServerConfig &Webserv::getServerConfigs(
 	/// 4. If there is no match by name, check flag if there exactly match with
 	/// host
 	/// 5. return first config from config
-	return *(*_servfd_to_config[0].begin());  /// placeholder
+
 }
 
 // private helper methods
