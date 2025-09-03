@@ -37,6 +37,19 @@ Webserv::Webserv(const std::string &config_path) {
 
 Webserv::~Webserv() {
 
+	for (auto it = _port_to_servfd.begin(); it != _port_to_servfd.end(); it++)
+	{
+		if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, it->second, nullptr) == -1) {
+            Logger::error("Removing socket from epoll failed\n");
+				Logger::shutdown();
+        }
+		close(it->second);
+	}
+
+	close (_epoll_fd);
+
+	_connections.clear();
+
 	/// 1. iterate _port_to_servfd:
 	///    - delete server socket from epoll
 	///    - close file destrictor
@@ -239,6 +252,8 @@ void Webserv::addConnection(int server_socket_fd) {
                      std::to_string(client_socketfd));	
 
 	/// 3. add to epoll
+	void Webserv::setClientSocketOptions(int client_socket_fd)
+
 
 		struct epoll_event client_ev;
 
