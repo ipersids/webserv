@@ -48,7 +48,7 @@ Webserv::~Webserv() {
 
 	close (_epoll_fd);
 
-	_connections.clear();
+	_connections.clear()
 
 	/// 1. iterate _port_to_servfd:
 	///    - delete server socket from epoll
@@ -60,6 +60,8 @@ Webserv::~Webserv() {
 
 // public methods
 
+int constexpr NONBLOCKING = 0;
+
 void Webserv::run(void) {
 	/// 1. start main event loop -> while (true)
 	/// 2. epoll_wait return events
@@ -67,19 +69,46 @@ void Webserv::run(void) {
 	///    - if it is new connection -> addConnection(...)
 	///    - else -> handleConnection(...) and handleKeepAliveConnection(...)
 	/// 4. check timouts for connections -> cleanupTimeOutConnections(...)
+
+	struct epoll_event events[WEBSERV_MAX_EVENTS];
+
+	while(1)
+	{
+		int events_total =  epoll_wait(_epoll_fd, events, WEBSERV_MAX_EVENTS, NONBLOCKING)
+	
+		for(int index = 0; i < events_total; index++)
+		{
+			int fd = events[index].data.fd;
+			auto it = _connections.find(fd);
+			if (it == _connections.end()) {
+				addConnection(fd); //If it is not in connections it is a server fd
+			} else {
+				handleConnection(fd); // if it was found it is a client fd
+			}
+		}
+		cleanupTimeOutConnections();
+	}
+
+
+
 }
 
 // getters
 
 int Webserv::getPortByServerSocket(int server_socket_fd) {
-	(void)server_socket_fd;
+	
+
+	for (auto it = _port_to_servfd.begin() ; it == _port_to_servfd.end(); it++)
+	{
+		if (it->second == server_socket_fd)
+			return it->first;
+	}
 	return -1;
 }
 
 const ConfigParser::ServerConfig &Webserv::getServerConfigs(
 		int server_socket_fd, const std::string &host) {
-	(void)server_socket_fd;
-	(void)host;
+
 	/// 1. find config vector from _servfd_to_config using server_socket_fd
 	///    - if there is no one (what is almost impossible) -> throw
 	
@@ -146,7 +175,7 @@ void Webserv::openServerSockets(void) {
 	for (auto it = _config.servers.begin(); it != _config.servers.end(); it++)
 	{
 		
-		if (_port_to_servfd.find(it->port) == nullptr)
+		if (_port_to_servfd.find(it->first) == nullptr)
 		{
 			int server_socketfd = socket(AF_INET, SOCK_STREAM, 0);
 			if (server_socketfd == -1)
@@ -155,12 +184,12 @@ void Webserv::openServerSockets(void) {
 				Logger::error("The socket() system call failed.");
 				Logger::shutdown();
 			}
-			_port_to_servfd.emplace(it->port, server_socketfd);
-			_servfd_to_config.emplace(it->port, std::vector<ConfigParser::ServerConfig*>{ &*it });
+			_port_to_servfd.emplace(it->first, server_socketfd);
+			_servfd_to_config.emplace(it->first, std::vector<ConfigParser::ServerConfig*>{ &*it });
 		}
 		else 
 		{
-			_servfd_to_config[it->port].push_back(&*it);
+			_servfd_to_config[it->first].push_back(&*it);
 		}
 	}
 }
@@ -174,12 +203,9 @@ void Webserv::bindServerSockets(void) {
 for(auto it = _port_to_servfd.begin(); it != _port_to_servfd.end(); it++)
 {
 	int enable = 1;
-	if (setsockopt(it->second, SOL_SOCKET, SO_REUSEADDR, &enable,
-								sizeof(enable)) == -1) {
-		Logger::error("Setting the socket options with setsockopt() failed.");
-		Logger::shutdown();
-		throw std::runtime_error("Setting socket options failed");
-	}
+
+	setServerSocketOptions(it->second);
+
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = INADDR_ANY;
 	serv_addr.sin_port = htons(it->first);
@@ -280,7 +306,24 @@ void Webserv::addConnection(int server_socket_fd) {
 }
 
 void Webserv::handleConnection(int client_socket_fd) {
-	(void)client_socket_fd;
+
+
+	char buffer[WEBSERV_BUFFER_SIZE];
+	ssize_t bytes_read = recv(client_socket_fd, buffer, sizeof(buffer), 0);
+
+	if (bytes_read < 0)
+	{
+		return 0;
+	}
+	else if (bytes_read == 0)
+	{
+		_connections.erase(client_socket_fd);
+	}
+	else
+	{
+		_connections[client_socket_fd]->processRequest(std::string(buffer, bytes_read));
+	}
+
 	/// 1. read data from event
 	///    - if bytes_read == -1 -> return;
 	///    - disconnect client if received data is empty;
@@ -298,7 +341,7 @@ void Webserv::cleanupTimeOutConnections(void) {
 	auto it = _connections.begin();
 	while(it != _connections.end())
 	{
-		if (it->second->isTimedOut(std::chrono::seconds(WEBSERV_CONNECTION_TIMEOUT_SEC)) == true)
+		if (it->second->isTimedOut(std::chrono::seconds(WEBSERV_CONNECTION_TIMEOUT_SEC)) == true) //am i using this correctly?
 		{
 			it = _connections.erase(it);
 		}
@@ -318,7 +361,7 @@ void Webserv::handleKeepAliveConnection(int client_socket_fd) {
 	auto it = _connections.begin();
 	while(it != _connections.end())
 	{
-		if (it->second->keepAlive() == true)
+		if (it->second->keepAlive() == false) //Mistake in the instructions
 		{
 			it = _connections.erase(it);
 		}
@@ -330,13 +373,65 @@ void Webserv::handleKeepAliveConnection(int client_socket_fd) {
 }
 
 void Webserv::setServerSocketOptions(int server_socket_fd) {
-	(void)server_socket_fd;
+
+	int enable = 1;
+
+	if (setsockopt(server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable,
+		sizeof(enable)) == -1) {
+	Logger::error("Setting the socket options with setsockopt() failed.");
+	Logger::shutdown();
+	throw std::runtime_error("Setting socket options failed");
+	}
+
+	if (setsockopt(server_socket_fd, SOL_SOCKET, SO_REUSEPORT, &enable,
+		sizeof(enable)) == -1) {
+	Logger::error("Setting the socket options with setsockopt() failed.");
+	Logger::shutdown();
+	throw std::runtime_error("Setting socket options failed");
+	}
+
 	/// setsockopt(...), useful flags:
 	/// SO_REUSEADDR, SO_REUSEPORT
 }
 
 void Webserv::setClientSocketOptions(int client_socket_fd) {
-	(void)client_socket_fd;
 	/// setsockopt(...), useful flags:
 	/// SO_KEEPALIVE, SO_RCVBUF, SO_SNDBUF, SO_RCVTIMEO, SO_RCVTIMEO
+
+	int enable = 1;
+
+	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_KEEPALIVE, &enable,
+		sizeof(enable)) == -1) {
+	Logger::error("Setting the socket options with setsockopt() failed.");
+	Logger::shutdown();
+	throw std::runtime_error("Setting socket options failed");
+	}
+
+	int buffer_size = WEBSERV_BUFFER_SIZE
+
+	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_RCVBUF, &buffer_size,
+		sizeof(buffer_size)) == -1) {
+	Logger::error("Setting the socket options with setsockopt() failed.");
+	Logger::shutdown();
+	throw std::runtime_error("Setting socket options failed");
+	}
+	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_SNDBUF, &buffer_size,
+		sizeof(buffer_size)) == -1) {
+	Logger::error("Setting the socket options with setsockopt() failed.");
+	Logger::shutdown();
+	throw std::runtime_error("Setting socket options failed");
+	}
+
+	struct timeval timeout;
+	timeout.tv_sec = WEBSERV_TIMEOUT_MS / 1000;
+	timeout.tv_usec = WEBSERV_TIMEOUT_MS % 1000 * 1000;
+
+	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
+		sizeof(timeout)) == -1) {
+	Logger::error("Setting the socket options with setsockopt() failed.");
+	Logger::shutdown();
+	throw std::runtime_error("Setting socket options failed");
+	}
+
+
 }

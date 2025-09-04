@@ -49,7 +49,7 @@ class Webserv {
 
  private:
   ConfigParser::Config _config;
-  std::unordered_map<int, int> _port_to_servfd; //port and the matching fd
+  std::unordered_map<int, int> _port_to_servfd; //port and the matching fd // this needs to be fd to port so that fd is guaranteed to be unique
   std::unordered_map<int, std::vector<ConfigParser::ServerConfig *>> //fd and the configs, there might be multiple
       _servfd_to_config;
   int _epoll_fd;
