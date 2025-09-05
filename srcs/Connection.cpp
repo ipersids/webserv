@@ -77,7 +77,7 @@ void Connection::processRequest(std::string&& data) {
     response.setConnectionHeader(_request.getHeader("Connection"),
                                  _request.getHttpVersion());
     _keep_alive = response.isKeepAliveConnection();
-    _write_buffer = (response.convertToString());
+    _write_buffer = response.convertToString();
     DBG("----------- SENDING RESPONSE [3] -----------\n" << _write_buffer);
   }
   sendResponse();
