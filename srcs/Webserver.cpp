@@ -112,11 +112,11 @@ const ConfigParser::ServerConfig &Webserv::getServerConfigs(
 	/// 1. find config vector from _servfd_to_config using server_socket_fd
 	///    - if there is no one (what is almost impossible) -> throw
 	
-	
+	(void) server_socket_fd;
 	size_t colon_pos = host.find(':');
 
 	if (colon_pos != std::string_view::npos) {
-    	std::string_view myHost = host.substr(0, colon_pos); //avoids copying
+    	std::string myHost = host.substr(0, colon_pos); 
 	
 		for (auto it = _servfd_to_config.begin(); it != _servfd_to_config.end(); it++)
 		{
@@ -131,7 +131,10 @@ const ConfigParser::ServerConfig &Webserv::getServerConfigs(
 			}
 
 		}
-		int myPort = std::stoi(host.substr(colon_pos + 1));
+
+		size_t pos = host.find_last_of(':');
+
+		int myPort = std::stoi(host.substr(pos + 1));
 
 		for (auto it = _servfd_to_config.begin(); it != _servfd_to_config.end(); it++)
 		{
@@ -199,12 +202,10 @@ void Webserv::bindServerSockets(void) {
 	/// 1. iterate _port_to_servfd
 	/// 2. setServerSocketOptions(...) and bind(...)
 
-	  struct sockaddr_in serv_addr, cli_addr;
+	  struct sockaddr_in serv_addr;
 
 for(auto it = _port_to_servfd.begin(); it != _port_to_servfd.end(); it++)
 {
-	int enable = 1;
-
 	setServerSocketOptions(it->second);
 
 	serv_addr.sin_family = AF_INET;
@@ -248,13 +249,13 @@ void Webserv::addServerSocketsToEpoll(void) {
 
 	for(auto it = _port_to_servfd.begin(); it != _port_to_servfd.end(); it++)
 	{
-		struct epoll_event ev, events[WEBSERV_MAX_EVENTS];
-  	ev.events = EPOLLIN;
-  	ev.data.fd = it->second;
-  	if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, it->second, &ev) == -1) {
-    Logger::error("The epoll_ctl() failed: server listen socket.");
-    Logger::shutdown();
-    throw std::runtime_error("Epoll_ctl() failed");
+		struct epoll_event ev;
+		ev.events = EPOLLIN;
+		ev.data.fd = it->second;
+		if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, it->second, &ev) == -1) {
+		Logger::error("The epoll_ctl() failed: server listen socket.");
+		Logger::shutdown();
+		throw std::runtime_error("Epoll_ctl() failed");
   	}
 	}
 }
@@ -309,8 +310,7 @@ void Webserv::addConnection(int server_socket_fd) {
 void Webserv::handleConnection(int client_socket_fd) {
 
 
-	char buffer[WEBSERV_BUFFER_SIZE];
-	ssize_t bytes_read = recv(client_socket_fd, buffer, sizeof(buffer), 0);
+	ssize_t bytes_read = recv(client_socket_fd, _buffer, sizeof(_buffer), 0);
 
 	if (bytes_read < 0)
 	{
@@ -322,7 +322,7 @@ void Webserv::handleConnection(int client_socket_fd) {
 	}
 	else
 	{
-		_connections[client_socket_fd]->processRequest(std::string(buffer, bytes_read));
+		_connections[client_socket_fd]->processRequest(std::string(_buffer, bytes_read));
 	}
 
 	/// 1. read data from event
