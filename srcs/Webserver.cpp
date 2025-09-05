@@ -48,7 +48,7 @@ Webserv::~Webserv() {
 
 	close (_epoll_fd);
 
-	_connections.clear()
+	_connections.clear();
 
 	/// 1. iterate _port_to_servfd:
 	///    - delete server socket from epoll
@@ -74,9 +74,9 @@ void Webserv::run(void) {
 
 	while(1)
 	{
-		int events_total =  epoll_wait(_epoll_fd, events, WEBSERV_MAX_EVENTS, NONBLOCKING)
+		int events_total =  epoll_wait(_epoll_fd, events, WEBSERV_MAX_EVENTS, NONBLOCKING);
 	
-		for(int index = 0; i < events_total; index++)
+		for(int index = 0; index < events_total; index++)
 		{
 			int fd = events[index].data.fd;
 			auto it = _connections.find(fd);
@@ -174,8 +174,9 @@ void Webserv::openServerSockets(void) {
 
 	for (auto it = _config.servers.begin(); it != _config.servers.end(); it++)
 	{
-		
-		if (_port_to_servfd.find(it->first) == nullptr)
+		for (auto it2 = _config.servers.begin(); it2 != _config.servers.end(); it2++)
+
+		if (_port_to_servfd.find(it2->port) == nullptr)
 		{
 			int server_socketfd = socket(AF_INET, SOCK_STREAM, 0);
 			if (server_socketfd == -1)
@@ -184,12 +185,12 @@ void Webserv::openServerSockets(void) {
 				Logger::error("The socket() system call failed.");
 				Logger::shutdown();
 			}
-			_port_to_servfd.emplace(it->first, server_socketfd);
-			_servfd_to_config.emplace(it->first, std::vector<ConfigParser::ServerConfig*>{ &*it });
+			_port_to_servfd.emplace(it2->port, server_socketfd);
+			_servfd_to_config.emplace(it2->port, std::vector<ConfigParser::ServerConfig*>{ &*it });
 		}
 		else 
 		{
-			_servfd_to_config[it->first].push_back(&*it);
+			_servfd_to_config[it2->port].push_back(&*it);
 		}
 	}
 }
@@ -278,7 +279,7 @@ void Webserv::addConnection(int server_socket_fd) {
                      std::to_string(client_socketfd));	
 
 	/// 3. add to epoll
-	void Webserv::setClientSocketOptions(int client_socket_fd)
+	setClientSocketOptions(client_socketfd);
 
 
 		struct epoll_event client_ev;
@@ -313,7 +314,7 @@ void Webserv::handleConnection(int client_socket_fd) {
 
 	if (bytes_read < 0)
 	{
-		return 0;
+		return;
 	}
 	else if (bytes_read == 0)
 	{
@@ -407,7 +408,7 @@ void Webserv::setClientSocketOptions(int client_socket_fd) {
 	throw std::runtime_error("Setting socket options failed");
 	}
 
-	int buffer_size = WEBSERV_BUFFER_SIZE
+	int buffer_size = WEBSERV_BUFFER_SIZE;
 
 	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_RCVBUF, &buffer_size,
 		sizeof(buffer_size)) == -1) {
