@@ -130,7 +130,7 @@ void Connection::buildParserErrorResponse(void) {
       _webserv.getServerConfigs(_server_fd, _request.getHeader("Host")));
   response.insertHeader("Connection", "close");
   _keep_alive = false;
-  _write_buffer = (response.convertToString());
+  _write_buffer = response.convertToString();
 }
 
 void Connection::buildMethodHandlerErrorResponse(HttpResponse& response) {
@@ -139,5 +139,5 @@ void Connection::buildMethodHandlerErrorResponse(HttpResponse& response) {
   response.setConnectionHeader(_request.getHeader("Connection"),
                                _request.getHttpVersion());
   _keep_alive = response.isKeepAliveConnection();
-  _write_buffer = (response.convertToString());
+  _write_buffer = response.convertToString();
 }
