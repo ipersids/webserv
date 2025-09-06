@@ -36,7 +36,7 @@ class Connection {
              HttpMethodHandler& method_handler);
 
   void processRequest(std::string&& data);
-
+  int getClientFD();  
   void updateLastActiveTime(void);
   bool isTimedOut(std::chrono::seconds timeout) const;
   bool keepAlive() const;

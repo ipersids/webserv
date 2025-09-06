@@ -32,6 +32,13 @@ class Connection;
 /// @brief Application buffer: for reading client data (16 KB)
 #define WEBSERV_BUFFER_SIZE 16384
 
+#define DEFAULT_CONFIG_PATH "tests/test-configs/test.conf"
+
+#define DEFAULT_LOG_PATH "logs/webserv.log"
+
+int constexpr NONBLOCKING = 0;
+/// @brief If wait time is zero, it is non-blocking
+
 
 class Webserv {
  public:

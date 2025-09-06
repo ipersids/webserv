@@ -11,7 +11,14 @@ Webserv::Webserv(const std::string &config_path) {
 	Logger::init(DEFAULT_LOG_PATH);
 	/// 2. parse webserv config file from `config_path`
 
+	try {
 	_config = ConfigParser::parse(config_path);
+	}
+	catch(...)
+	{
+		Logger::error("Parse failed\n");
+		throw std::runtime_error("Parse failed\n");
+	}
 
 	/// 3. create socket for each unique port
 
@@ -41,7 +48,6 @@ Webserv::~Webserv() {
 	{
 		if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, it->second, nullptr) == -1) {
             Logger::error("Removing socket from epoll failed\n");
-				Logger::shutdown();
         }
 		close(it->second);
 	}
@@ -60,7 +66,7 @@ Webserv::~Webserv() {
 
 // public methods
 
-int constexpr NONBLOCKING = 0;
+
 
 void Webserv::run(void) {
 	/// 1. start main event loop -> while (true)
@@ -302,9 +308,10 @@ void Webserv::addConnection(int server_socket_fd) {
 		}
 		catch (...)
 		{
-			throw std::runtime_error("Creating and assigning unique ptr failed");
+			throw std::runtime_error("Creating and assigning unique ptr failed"); //I was originally planning to catch it in the main but this is required for it to compile
 		}
-	
+		
+		
 }
 
 void Webserv::handleConnection(int client_socket_fd) {
@@ -318,10 +325,12 @@ void Webserv::handleConnection(int client_socket_fd) {
 	}
 	else if (bytes_read == 0)
 	{
+		epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, client_socket_fd, NULL);
 		_connections.erase(client_socket_fd);
 	}
 	else
 	{
+		_buffer[bytes_read] = '\0';
 		_connections[client_socket_fd]->processRequest(std::string(_buffer, bytes_read));
 	}
 
@@ -344,6 +353,7 @@ void Webserv::cleanupTimeOutConnections(void) {
 	{
 		if (it->second->isTimedOut(std::chrono::seconds(WEBSERV_CONNECTION_TIMEOUT_SEC)) == true) //am i using this correctly?
 		{
+			epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, it->second->getClientFD(), NULL);
 			it = _connections.erase(it);
 		}
 		else 
@@ -364,6 +374,7 @@ void Webserv::handleKeepAliveConnection(int client_socket_fd) {
 	{
 		if (it->second->keepAlive() == false) //Mistake in the instructions
 		{
+			epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, it->second->getClientFD(), NULL);
 			it = _connections.erase(it);
 		}
 		else 
