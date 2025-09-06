@@ -1,5 +1,4 @@
 #include "Webserver.hpp"
-#include "defaults.hpp"
 #include "config.hpp"
 
 // Constructor and destructor
@@ -120,7 +119,7 @@ const ConfigParser::ServerConfig &Webserv::getServerConfigs(
 	///    - if there is no one (what is almost impossible) -> throw
 	
 	(void) server_socket_fd;
-	size_t colon_pos = host.find(':');
+	size_t colon_pos = host.find_last_of(':');
 
 	if (colon_pos != std::string_view::npos) {
     	std::string myHost = host.substr(0, colon_pos); 
