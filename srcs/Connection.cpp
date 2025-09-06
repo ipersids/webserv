@@ -19,11 +19,6 @@ Connection::~Connection() {
   }
 }
 
-int Connection::getClientFD()
-{
-  return _client_fd;
-}
-
 Connection::Connection(int client_socket_fd, int server_socket_fd,
                        Webserv& webserv, HttpMethodHandler& method_handler)
     : _client_fd(client_socket_fd),

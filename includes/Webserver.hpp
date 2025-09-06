@@ -39,8 +39,8 @@ class Connection;
 
 #define DEFAULT_LOG_PATH "logs/webserv.log"
 
-int constexpr NONBLOCKING = 0;
 /// @brief If wait time is zero, it is non-blocking
+int constexpr NONBLOCKING = 0;
 
 
 class Webserv {
