@@ -438,8 +438,7 @@ void Webserv::setClientSocketOptions(int client_socket_fd) {
 }
 
 
-void Webserv::set_exit_to_true(int useless)
+void Webserv::set_exit_to_true(int signal)
 {
-  (void) useless;
-  shutdown_requested = true;
+  shutdown_requested = signal;
 }

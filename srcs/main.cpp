@@ -38,5 +38,7 @@ int main(int argc, char **argv) {
     std::cerr << "\n\n[UKNOWN ERROR]" << std::endl;
     return 1;
   }
+  if (shutdown_requested)
+    return 128 + shutdown_requested;
   return 0;
 }
