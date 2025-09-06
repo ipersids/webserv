@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <csignal>
 #include <cstring>
 #include <filesystem>
 #include <memory>
@@ -18,7 +19,6 @@
 #include "HttpMethodHandler.hpp"
 #include "Logger.hpp"
 #include "config.hpp"
-#include <csignal>
 
 extern volatile std::sig_atomic_t shutdown_requested;
 
@@ -41,7 +41,6 @@ class Connection;
 
 /// @brief If wait time is zero, it is non-blocking
 int constexpr NONBLOCKING = 0;
-
 
 class Webserv {
  public:

@@ -1,20 +1,15 @@
 #include "Connection.hpp"
 #include "Webserver.hpp"
 
-
-
-
- volatile std::sig_atomic_t shutdown_requested = 0;
-
+volatile std::sig_atomic_t shutdown_requested = 0;
 
 int main(int argc, char **argv) {
-
- 
-
   signal(SIGINT, Webserv::set_exit_to_true);
   signal(SIGTERM, Webserv::set_exit_to_true);
-  signal(SIGPIPE, SIG_IGN); //ignores it, writing to a closed socket wont crash the program
-  signal(SIGCHLD, SIG_IGN); //Apparently this tells the kernel to reap children, so no zombies? 
+  signal(SIGPIPE, SIG_IGN);  // ignores it, writing to a closed socket wont
+                             // crash the program
+  signal(SIGCHLD, SIG_IGN);  // Apparently this tells the kernel to reap
+                             // children, so no zombies?
 
   if (argc > 2) {
     std::cerr << "Usage: ./webserv [path_to_config_file]" << std::endl;
@@ -40,7 +35,6 @@ int main(int argc, char **argv) {
     std::cerr << "\n\n[UKNOWN ERROR]" << std::endl;
     return 1;
   }
-  if (shutdown_requested)
-    return 128 + shutdown_requested;
+  if (shutdown_requested) return 128 + shutdown_requested;
   return 0;
 }
