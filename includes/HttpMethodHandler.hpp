@@ -31,6 +31,7 @@
 #include "HttpResponse.hpp"
 #include "Logger.hpp"
 #include "config.hpp"
+#include "CgiHandler.hpp"
 
 class HttpRequest;
 class HttpResponse;

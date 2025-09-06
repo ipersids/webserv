@@ -165,7 +165,7 @@ std::string HttpResponse::whatDateGMT(void) {
   gmtime_r(&now, &gmt);
   char buf[100];
   std::strftime(buf, sizeof(buf), "%a, %d %b %Y %H:%M:%S GMT", &gmt);
-  return(std::string(buf));
+  return std::string(buf);
 }
 
 // Helpers
@@ -289,5 +289,5 @@ std::string HttpResponse::getStatusLine(void) const {
   std::stringstream status_line;
   status_line << "HTTP/1.1 " << static_cast<int>(_status_code) << " "
               << whatReasonPhrase(_status_code);
-  return (status_line.str());
+  return status_line.str();
 }
