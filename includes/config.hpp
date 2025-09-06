@@ -33,7 +33,8 @@ namespace ConfigParser {
         size_t      client_max_body_size    = 1048576; // Default 1MB
         std::string redirect_url;
         std::vector<std::string>            allowed_methods;
-        std::map<std::string, std::string>  cgi_pass;
+        std::vector<std::string>            cgi_ext;
+        std::vector<std::string>            cgi_path;
         std::map<int, std::string>          error_pages;
 
         LocationConfig(const ServerConfig& parent);
@@ -47,7 +48,8 @@ namespace ConfigParser {
         std::string index;
         size_t      client_max_body_size    = 1048576; // Default 1MB
         std::map<int, std::string>          error_pages;
-        std::map<std::string, std::string>  cgi_pass;
+        std::vector<std::string>            cgi_ext;
+        std::vector<std::string>            cgi_path;
         std::vector<LocationConfig>         locations;
     };
 

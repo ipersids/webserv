@@ -212,11 +212,10 @@ void parseServerDirective(ConfigParser::ServerConfig& server, const std::vector<
         catch (...) {
             throwError("Invalid error_page format", keyword.line);
         }
-    } else if (keyword.value == "cgi_path" && values.size() >= 2) {
-        std::string handler = values[0];
-        for (size_t i = 1; i < values.size(); ++i) {
-            server.cgi_pass[values[i]] = handler;
-        }
+    } else if (keyword.value == "cgi_path" && !values.empty()) {
+        server.cgi_path = values;
+    } else if (keyword.value == "cgi_ext" && !values.empty()) {
+        server.cgi_ext = values;
     }
 }
 
@@ -266,11 +265,10 @@ void parseLocationDirective(ConfigParser::LocationConfig& location, const std::v
         catch (...) {
             throwError("Invalid error_page format", keyword.line);
         }
-    } else if (keyword.value == "cgi_path" && values.size() >= 2) {
-        std::string handler = values[0];
-        for (size_t i = 1; i < values.size(); ++i) {
-            location.cgi_pass[values[i]] = handler;
-        }
+    }  else if (keyword.value == "cgi_path" && !values.empty()) {
+        location.cgi_path = values;
+    } else if (keyword.value == "cgi_ext" && !values.empty()) {
+        location.cgi_ext = values;
     }
 }
 
