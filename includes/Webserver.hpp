@@ -20,7 +20,7 @@
 #include "config.hpp"
 #include <csignal>
 
-extern volatile std::sig_atomic_t shutdown_requested = 0;
+extern volatile std::sig_atomic_t shutdown_requested;
 
 class Connection;
 

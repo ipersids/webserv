@@ -4,10 +4,12 @@
 
 
 
-
+ volatile std::sig_atomic_t shutdown_requested = 0;
 
 
 int main(int argc, char **argv) {
+
+ 
 
   signal(SIGINT, Webserv::set_exit_to_true);
   signal(SIGTERM, Webserv::set_exit_to_true);
