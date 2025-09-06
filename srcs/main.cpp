@@ -17,15 +17,13 @@ int main(int argc, char **argv) {
     webserv.run();
   } catch (const std::runtime_error &e) {
     std::cerr << "\n\n[RUNTIME ERROR] " << e.what() << "\n" << std::endl;
-    Logger::shutdown();
     return 1;
   } catch (const std::exception &e) {
     std::cerr << "\n\n[EXCEPTION ERROR] " << e.what() << "\n" << std::endl;
-    Logger::shutdown();
+
     return 1;
   } catch (...) {
     std::cerr << "\n\n[UKNOWN ERROR]" << std::endl;
-    Logger::shutdown();
     return 1;
   }
   return 0;

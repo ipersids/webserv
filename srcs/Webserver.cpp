@@ -10,6 +10,7 @@ Webserv::Webserv(const std::string &config_path) {
 
 	Logger::init(DEFAULT_LOG_PATH);
 	/// 2. parse webserv config file from `config_path`
+	std::atexit(Logger::shutdown);
 
 	try {
 	_config = ConfigParser::parse(config_path);
@@ -192,7 +193,6 @@ void Webserv::openServerSockets(void) {
 			{
 				throw std::runtime_error("Socket creation failed");
 				Logger::error("The socket() system call failed.");
-				Logger::shutdown();
 			}
 			_port_to_servfd.emplace(it2->port, server_socketfd);
 			_servfd_to_config.emplace(it2->port, std::vector<ConfigParser::ServerConfig*>{ &*it });
@@ -219,7 +219,6 @@ for(auto it = _port_to_servfd.begin(); it != _port_to_servfd.end(); it++)
 	serv_addr.sin_port = htons(it->first);
 	if (bind(it->second, (struct sockaddr *)&serv_addr, sizeof(serv_addr))) {
 		Logger::error("The bind() method failed.");
-		Logger::shutdown();
 		throw std::runtime_error("Binding socket failed");
 	}
 }
@@ -234,7 +233,6 @@ void Webserv::listenServerSockets(void) {
 	{
 		 if (listen(it->second, WEBSERV_MAX_PENDING_CONNECTIONS) == -1) {
     Logger::error("The listen() function failed.");
-    Logger::shutdown();
     throw std::runtime_error("Listen failed");
   }
 	}
@@ -244,7 +242,6 @@ void Webserv::createEpoll(void) {
 	_epoll_fd = epoll_create1(0);
   if (_epoll_fd == -1) {
     Logger::error("The epoll_create1() function failed.");
-    Logger::shutdown();
      throw std::runtime_error("Epoll creation failed");
   }
 }
@@ -260,7 +257,6 @@ void Webserv::addServerSocketsToEpoll(void) {
 		ev.data.fd = it->second;
 		if (epoll_ctl(_epoll_fd, EPOLL_CTL_ADD, it->second, &ev) == -1) {
 		Logger::error("The epoll_ctl() failed: server listen socket.");
-		Logger::shutdown();
 		throw std::runtime_error("Epoll_ctl() failed");
   	}
 	}
@@ -391,14 +387,12 @@ void Webserv::setServerSocketOptions(int server_socket_fd) {
 	if (setsockopt(server_socket_fd, SOL_SOCKET, SO_REUSEADDR, &enable,
 		sizeof(enable)) == -1) {
 	Logger::error("Setting the socket options with setsockopt() failed.");
-	Logger::shutdown();
 	throw std::runtime_error("Setting socket options failed");
 	}
 
 	if (setsockopt(server_socket_fd, SOL_SOCKET, SO_REUSEPORT, &enable,
 		sizeof(enable)) == -1) {
 	Logger::error("Setting the socket options with setsockopt() failed.");
-	Logger::shutdown();
 	throw std::runtime_error("Setting socket options failed");
 	}
 
@@ -415,7 +409,6 @@ void Webserv::setClientSocketOptions(int client_socket_fd) {
 	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_KEEPALIVE, &enable,
 		sizeof(enable)) == -1) {
 	Logger::error("Setting the socket options with setsockopt() failed.");
-	Logger::shutdown();
 	throw std::runtime_error("Setting socket options failed");
 	}
 
@@ -424,13 +417,11 @@ void Webserv::setClientSocketOptions(int client_socket_fd) {
 	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_RCVBUF, &buffer_size,
 		sizeof(buffer_size)) == -1) {
 	Logger::error("Setting the socket options with setsockopt() failed.");
-	Logger::shutdown();
 	throw std::runtime_error("Setting socket options failed");
 	}
 	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_SNDBUF, &buffer_size,
 		sizeof(buffer_size)) == -1) {
 	Logger::error("Setting the socket options with setsockopt() failed.");
-	Logger::shutdown();
 	throw std::runtime_error("Setting socket options failed");
 	}
 
@@ -441,7 +432,6 @@ void Webserv::setClientSocketOptions(int client_socket_fd) {
 	if (setsockopt(client_socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout,
 		sizeof(timeout)) == -1) {
 	Logger::error("Setting the socket options with setsockopt() failed.");
-	Logger::shutdown();
 	throw std::runtime_error("Setting socket options failed");
 	}
 
