@@ -285,5 +285,5 @@ std::string HttpRequest::getRequestLine(void) const {
   std::stringstream request_line;
   request_line << getMethod() << " " << getRequestTarget() << " "
                << getHttpVersion();
-  return std::move(request_line.str());
+  return (request_line.str());
 }

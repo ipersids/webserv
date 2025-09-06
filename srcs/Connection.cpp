@@ -19,6 +19,11 @@ Connection::~Connection() {
   }
 }
 
+int Connection::getClientFD()
+{
+  return _client_fd;
+}
+
 Connection::Connection(int client_socket_fd, int server_socket_fd,
                        Webserv& webserv, HttpMethodHandler& method_handler)
     : _client_fd(client_socket_fd),
@@ -77,7 +82,7 @@ void Connection::processRequest(std::string&& data) {
     response.setConnectionHeader(_request.getHeader("Connection"),
                                  _request.getHttpVersion());
     _keep_alive = response.isKeepAliveConnection();
-    _write_buffer = std::move(response.convertToString());
+    _write_buffer = response.convertToString();
     DBG("----------- SENDING RESPONSE [3] -----------\n" << _write_buffer);
   }
   sendResponse();
@@ -130,7 +135,7 @@ void Connection::buildParserErrorResponse(void) {
       _webserv.getServerConfigs(_server_fd, _request.getHeader("Host")));
   response.insertHeader("Connection", "close");
   _keep_alive = false;
-  _write_buffer = std::move(response.convertToString());
+  _write_buffer = response.convertToString();
 }
 
 void Connection::buildMethodHandlerErrorResponse(HttpResponse& response) {
@@ -139,5 +144,5 @@ void Connection::buildMethodHandlerErrorResponse(HttpResponse& response) {
   response.setConnectionHeader(_request.getHeader("Connection"),
                                _request.getHttpVersion());
   _keep_alive = response.isKeepAliveConnection();
-  _write_buffer = std::move(response.convertToString());
+  _write_buffer = response.convertToString();
 }
