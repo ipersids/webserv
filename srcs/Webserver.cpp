@@ -78,7 +78,7 @@ void Webserv::run(void) {
 
 	struct epoll_event events[WEBSERV_MAX_EVENTS];
 
-	while(1)
+	while(shutdown_requested == false)
 	{
 		int events_total =  epoll_wait(_epoll_fd, events, WEBSERV_MAX_EVENTS, NONBLOCKING);
 	
@@ -435,4 +435,11 @@ void Webserv::setClientSocketOptions(int client_socket_fd) {
 	}
 
 
+}
+
+
+void Webserv::set_exit_to_true(int useless)
+{
+  (void) useless;
+  shutdown_requested = true;
 }

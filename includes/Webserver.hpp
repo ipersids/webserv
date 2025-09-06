@@ -18,6 +18,9 @@
 #include "HttpMethodHandler.hpp"
 #include "Logger.hpp"
 #include "config.hpp"
+#include <csignal>
+
+extern volatile std::sig_atomic_t shutdown_requested = false;
 
 class Connection;
 
@@ -47,6 +50,7 @@ class Webserv {
   ~Webserv();
   Webserv &operator=(const Webserv &other) = delete;
   Webserv(const Webserv &other) = delete;
+  static void set_exit_to_true(int useless);
 
   void run(void);
 

@@ -1,7 +1,19 @@
 #include "Connection.hpp"
 #include "Webserver.hpp"
 
+
+
+
+
+
+
 int main(int argc, char **argv) {
+
+  signal(SIGINT, Webserv::set_exit_to_true);
+  signal(SIGTERM, Webserv::set_exit_to_true);
+  signal(SIGPIPE, SIG_IGN); //ignores it, writing to a closed socket wont crash the program
+  signal(SIGCHLD, SIG_IGN); //Apparently this tells the kernel to reap children, so no zombies? 
+
   if (argc > 2) {
     std::cerr << "Usage: ./webserv [path_to_config_file]" << std::endl;
     return 1;
