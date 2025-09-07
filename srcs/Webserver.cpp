@@ -48,23 +48,17 @@ Webserv::Webserv(const std::string &config_path) {
 }
 
 Webserv::~Webserv() {
-  /// 1. iterate _port_to_servfd:
   for (auto it = _port_to_servfd.begin(); it != _port_to_servfd.end(); it++) {
-    ///    - delete server socket from epoll
     if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, it->second, nullptr) == -1) {
       Logger::warning("Failed to remove server fd from epoll " +
                       std::to_string(it->second) + ": " + strerror(errno));
     }
-    ///    - close file destrictor
     if (close(it->second) == -1) {
       Logger::warning("Failed to close server fd " +
                       std::to_string(it->second) + ": " + strerror(errno));
     }
   }
-  /// 2. close epoll file descriptor
   close(_epoll_fd);
-  /// 3. clear _connections map (it will call destructor of Connection objects,
-  /// because it is unique pointers)
   _connections.clear();
 }
 
@@ -72,9 +66,7 @@ Webserv::~Webserv() {
 
 void Webserv::run(void) {
   struct epoll_event events[WEBSERV_MAX_EVENTS];
-  /// 1. start main event loop -> while (true)
   while (shutdown_requested == false) {
-    /// 2. epoll_wait return events
     int events_total =
         epoll_wait(_epoll_fd, events, WEBSERV_MAX_EVENTS, NONBLOCKING);
     if (events_total == -1) {
@@ -82,11 +74,9 @@ void Webserv::run(void) {
                     std::string(strerror(errno)));
       throw std::runtime_error(std::string(strerror(errno)));
     }
-    /// 3. iterate events
     for (int index = 0; index < events_total; index++) {
       int fd = events[index].data.fd;
       auto it = _connections.find(fd);
-      ///    - if it is new connection
       if (it == _connections.end()) {
         addConnection(fd);  // If it is not in connections it is a server fd
       } else {
@@ -94,12 +84,9 @@ void Webserv::run(void) {
         handleKeepAliveConnection(fd);
       }
     }
-    /// 4. check timouts for connections
     cleanupTimeOutConnections();
   }
 }
-
-// getters
 
 int Webserv::getPortByServerSocket(int server_socket_fd) {
   for (auto it = _port_to_servfd.begin(); it == _port_to_servfd.end(); it++) {
@@ -130,7 +117,6 @@ const ConfigParser::ServerConfig &Webserv::getServerConfigs(
                   _host) != serv->server_names.end()) {
       return *serv;
     }
-    // if there is no match by name, try to match exactly host IP
     if (!is_match_by_serv_host && serv->host == _host) {
       _serv = serv;
       is_match_by_serv_host = true;
@@ -147,9 +133,7 @@ const ConfigParser::ServerConfig &Webserv::getServerConfigs(
 // private helper methods
 
 void Webserv::openServerSockets(void) {
-  /// 1. iterate _config
   for (ConfigParser::ServerConfig &serv : _config.servers) {
-    ///		- if it is new unique port:
     if (_port_to_servfd.find(serv.port) == _port_to_servfd.end()) {
       ///			-	create socket for each unique port
       int server_socket_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -158,11 +142,9 @@ void Webserv::openServerSockets(void) {
                       std::string(strerror(errno)));
         throw std::runtime_error(std::string(strerror(errno)));
       }
-      ///		- store info to _port_to_servfd and _servfd_to_config
       _port_to_servfd[serv.port] = server_socket_fd;
       _servfd_to_config[server_socket_fd].push_back(&serv);
     } else {
-      ///		- else -> add config to the vector _servfd_to_config
       // two servers can listen on the same port
       int tmp_socket = _port_to_servfd[serv.port];
       _servfd_to_config[tmp_socket].push_back(&serv);
@@ -171,8 +153,6 @@ void Webserv::openServerSockets(void) {
 }
 
 void Webserv::bindServerSockets(void) {
-  /// 1. iterate _port_to_servfd
-  /// 2. setServerSocketOptions(...) and bind(...)
   struct sockaddr_in serv_addr;
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_addr.s_addr = INADDR_ANY;
@@ -204,9 +184,6 @@ void Webserv::createEpoll(void) {
 }
 
 void Webserv::addServerSocketsToEpoll(void) {
-  /// 1. iterate _port_to_servfd
-  /// 2. add in epoll_ctl(...)
-
   for (auto it = _port_to_servfd.begin(); it != _port_to_servfd.end(); it++) {
     struct epoll_event ev;
     ev.events = EPOLLIN;
@@ -219,12 +196,10 @@ void Webserv::addServerSocketsToEpoll(void) {
 }
 
 void Webserv::addConnection(int server_socket_fd) {
-  /// 1. create client socket fd
   int client_socketfd = -1;
   struct sockaddr_in cli_addr;
   size_t client_socklen = sizeof(cli_addr);
 
-  /// 2. accept connection
   client_socketfd = accept(server_socket_fd, (struct sockaddr *)&cli_addr,
                            (socklen_t *)&client_socklen);
   if (client_socketfd == -1) {
@@ -254,9 +229,7 @@ void Webserv::addConnection(int server_socket_fd) {
 }
 
 void Webserv::handleConnection(int client_socket_fd) {
-  /// 1. read data from event
   ssize_t bytes_read = recv(client_socket_fd, _buffer, sizeof(_buffer), 0);
-  ///    - if bytes_read == -1 -> return;
   if (bytes_read < 0) {
     return;
   } else if (bytes_read == 0) {
@@ -274,15 +247,12 @@ void Webserv::handleConnection(int client_socket_fd) {
 }
 
 void Webserv::cleanupTimeOutConnections(void) {
-  /// 1. iterate _connections
-  /// 2. call Connection method isTimedOut(...)
-  ///    - if tru -> erase connection from _connections
-  ///    - else -> continue
+
   auto it = _connections.begin();
   while (it != _connections.end()) {
     if (it->second->isTimedOut(
             std::chrono::seconds(WEBSERV_CONNECTION_TIMEOUT_SEC)) ==
-        true)  // am i using this correctly?
+        true) 
     {
       Logger::info("Connection timed out: fd=" + std::to_string(it->first));
       if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, it->first, nullptr) == -1) {
@@ -339,9 +309,6 @@ void Webserv::setServerSocketOptions(int server_socket_fd) {
 }
 
 void Webserv::setClientSocketOptions(int client_socket_fd) {
-  /// setsockopt(...), useful flags:
-  /// SO_KEEPALIVE, SO_RCVBUF, SO_SNDBUF, SO_RCVTIMEO, SO_RCVTIMEO
-
   int enable = 1;
 
   if (setsockopt(client_socket_fd, SOL_SOCKET, SO_KEEPALIVE, &enable,
