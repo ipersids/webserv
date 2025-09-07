@@ -222,5 +222,6 @@ int main(int argc, char **argv) {
       }
     }
   }
+  if (shutdown_requested) return 128 + shutdown_requested;
   return 0;
 }

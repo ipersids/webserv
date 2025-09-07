@@ -5,6 +5,7 @@
 #include <mutex> // Required for thread safety
 #include <sstream> // Required for getCurrentTimestamp
 
+
 // An enum class is a more modern and type-safe alternative to a plain enum.
 enum class LogLevel {
     Info,

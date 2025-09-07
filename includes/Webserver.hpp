@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <csignal>
 #include <cstring>
 #include <filesystem>
 #include <memory>
@@ -18,6 +19,8 @@
 #include "HttpMethodHandler.hpp"
 #include "Logger.hpp"
 #include "config.hpp"
+
+extern volatile std::sig_atomic_t shutdown_requested;
 
 class Connection;
 
@@ -32,6 +35,13 @@ class Connection;
 /// @brief Application buffer: for reading client data (16 KB)
 #define WEBSERV_BUFFER_SIZE 16384
 
+#define DEFAULT_CONFIG_PATH "tests/test-configs/test.conf"
+
+#define DEFAULT_LOG_PATH "logs/webserv.log"
+
+/// @brief If wait time is zero, it is non-blocking
+int constexpr NONBLOCKING = 0;
+
 class Webserv {
  public:
   Webserv() = delete;
@@ -39,6 +49,7 @@ class Webserv {
   ~Webserv();
   Webserv &operator=(const Webserv &other) = delete;
   Webserv(const Webserv &other) = delete;
+  static void set_exit_to_true(int useless);
 
   void run(void);
 
