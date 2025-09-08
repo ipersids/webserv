@@ -118,8 +118,13 @@ HttpResponse CgiHandler::execute(const HttpRequest& request, const ConfigParser:
 
     // Setup pipes for communication
     int input_pipe[2], output_pipe[2];
-    if (pipe(input_pipe) == -1 || pipe(output_pipe) == -1) {
-        return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "Pipe creation failed");
+    if (pipe(input_pipe) == -1) {
+        return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "Input pipe creation failed");
+    }
+    if (pipe(output_pipe) == -1) {
+        close(input_pipe[0]);
+        close(input_pipe[1]);
+        return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "Output pipe creation failed");
     }
 
     // Execute CGI script
@@ -142,102 +147,72 @@ HttpResponse CgiHandler::execute(const HttpRequest& request, const ConfigParser:
  * @param output_pipe Pipe for receiving data from CGI script.
  * @return HttpResponse The response from the CGI script.
  */
-HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std::string& script_path, 
-                                        const std::string& interpreter, int input_pipe[2], int output_pipe[2]) {
+HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std::string& script_path,
+                                          const std::string& interpreter, int input_pipe[2], int output_pipe[2]) {
     // Write request body to script's stdin
     const std::string& body = request.getBody();
     if (!body.empty()) {
-        write(input_pipe[1], body.c_str(), body.length());
+        ssize_t written = write(input_pipe[1], body.c_str(), body.size());
+        if (written == -1) {
+            close(input_pipe[0]);
+            close(input_pipe[1]);
+            close(output_pipe[0]);
+            close(output_pipe[1]);
+            return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
+                                       "Failed to write request body to CGI");
+        }
     }
     close(input_pipe[1]);
 
     auto envp = setupEnvironment(request, script_path);
-    
-    // Fork and execute CGI script
+
     pid_t pid = fork();
     if (pid == 0) {
-        // Child process
-        dup2(input_pipe[0], STDIN_FILENO);
-        dup2(output_pipe[1], STDOUT_FILENO);
+        if (dup2(input_pipe[0], STDIN_FILENO) == -1 ||
+            dup2(output_pipe[1], STDOUT_FILENO) == -1) {
+            close(input_pipe[0]);
+            close(output_pipe[1]);
+            _exit(EXIT_FAILURE);
+        }
         close(input_pipe[0]);
         close(output_pipe[1]);
 
         const char* args[] = { interpreter.c_str(), script_path.c_str(), nullptr };
         execve(interpreter.c_str(), const_cast<char* const*>(args), envp.get());
-        perror("CGI execve failed");
         _exit(EXIT_FAILURE);
     }
-    
+
     if (pid == -1) {
+        // Fork failed
         close(input_pipe[0]);
+        close(input_pipe[1]);
         close(output_pipe[0]);
         close(output_pipe[1]);
         return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "Fork failed");
     }
-    
-    // Parent process - close unused pipe ends
+
+    // Parent process
     close(input_pipe[0]);
     close(output_pipe[1]);
-    
-    // Read CGI output with timeout
-    std::string output = readCgiOutput(output_pipe[0], pid);
-    close(output_pipe[0]);
-    
-    // Wait for child process to complete
-    int status;
-    waitpid(pid, &status, 0);
-    
-    if (output.empty()) {
-        return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "CGI execution failed");
-    }
-    
-    return parseOutput(output);
-}
 
-/**
- * @brief Reads CGI script output with timeout protection.
- *
- * Uses poll() to implement a timeout mechanism while reading from the CGI script.
- * If the script takes too long or hangs, it will be killed and an empty string returned.
- *
- * @param output_fd File descriptor to read CGI output from.
- * @param pid Process ID of the CGI script (for cleanup on timeout).
- * @return std::string The output from the CGI script, or empty on timeout/error.
- */
-std::string CgiHandler::readCgiOutput(int output_fd, pid_t pid) {
-    struct pollfd pfd;
-    pfd.fd = output_fd;
-    pfd.events = POLLIN;
-    
     std::string output;
     char buffer[CGI_BUFSIZE];
-    int timeout_ms = CGI_TIMEOUT * 1000;
-    
-    while (true) {
-        int poll_result = poll(&pfd, 1, timeout_ms);
-        
-        if (poll_result == 0) {
-            // Timeout - kill the process
-            kill(pid, SIGKILL);
-            return ""; // Will be handled as execution failed
-        } else if (poll_result < 0) {
-            // Poll error - kill the process
-            kill(pid, SIGKILL);
-            return ""; // Will be handled as execution failed
-        }
-        
-        ssize_t bytes_read = read(output_fd, buffer, CGI_BUFSIZE - 1);
-        if (bytes_read > 0) {
-            buffer[bytes_read] = '\0';
-            output += buffer;
-        } else if (bytes_read == 0) {
-            break; // End of file
-        } else {
-            break; // Read error
-        }
+    ssize_t bytes_read;
+    while ((bytes_read = read(output_pipe[0], buffer, sizeof(buffer) - 1)) > 0) {
+        buffer[bytes_read] = '\0';
+        output += buffer;
     }
-    
-    return output;
+    close(output_pipe[0]);
+
+    int status;
+    waitpid(pid, &status, 0);
+
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+        return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
+                                   "CGI script exited with an error");
+    }
+
+    return parseOutput(output);
 }
 
 HttpResponse CgiHandler::createErrorResponse(HttpUtils::HttpStatusCode status, const std::string& message) {
@@ -283,51 +258,65 @@ std::string CgiHandler::getInterpreter(const std::string& script_path, const Con
  */
 HttpResponse CgiHandler::parseOutput(const std::string& output) {
     HttpResponse response;
-    size_t header_end = output.find("\r\n\r\n");
-    if (header_end == std::string::npos) {
-        header_end = output.find("\n\n");
+
+    size_t separator_pos = output.find("\r\n\r\n");
+    if (separator_pos == std::string::npos) {
+        separator_pos = output.find("\n\n");
     }
-    
-    if (header_end != std::string::npos) {
-        std::string headers = output.substr(0, header_end);
-        std::string response_body = output.substr(header_end + (output.find("\r\n\r\n") != std::string::npos ? 4 : 2));
+    std::string headers_part;
+    std::string body_part;
+
+    if (separator_pos != std::string::npos) {
+        headers_part = output.substr(0, separator_pos);
+        size_t body_start_pos = separator_pos + (output.substr(separator_pos, 4) == "\r\n\r\n" ? 4 : 2);
+        body_part = output.substr(body_start_pos);
+    } else {
+        body_part = output;
+    }
+
+    std::istringstream header_stream(headers_part);
+    std::string line;
+    bool status_was_set_by_cgi = false;
+    bool content_type_was_set_by_cgi = false;
+
+    while (std::getline(header_stream, line)) {
+        if (line.empty() || (line.size() == 1 && line[0] == '\r')) {
+            continue;
+        }
+        if (line.back() == '\r') {
+            line.pop_back();
+        }
         
-        // Parse headers
-        std::istringstream header_stream(headers);
-        std::string line;
-        bool has_status = false;
-        
-        while (std::getline(header_stream, line)) {
-            if (!line.empty() && line.back() == '\r') {
-                line.pop_back();
-            }
-            
-            size_t colon = line.find(':');
-            if (colon != std::string::npos) {
-                std::string name = line.substr(0, colon);
-                std::string value = line.substr(colon + 1);
-                value.erase(0, value.find_first_not_of(" \t"));
-                
-                if (name == "Status") {
-                    has_status = true;
+        size_t colon_pos = line.find(':');
+        if (colon_pos != std::string::npos) {
+            std::string name = line.substr(0, colon_pos);
+            std::string value = line.substr(colon_pos + 1);
+            value.erase(0, value.find_first_not_of(" \t"));
+            std::string lower_name = HttpUtils::toLowerCase(name);
+
+            if (lower_name == "status") {
+                try {
                     int status_code = std::stoi(value.substr(0, 3));
                     response.setStatusCode(static_cast<HttpUtils::HttpStatusCode>(status_code));
-                } else {
-                    response.insertHeader(name, value);
+                    status_was_set_by_cgi = true;
+                } catch (...) {
+                    Logger::warning("CGI script sent an invalid Status header: " + value);
+                }
+            } else {
+                response.insertHeader(name, value);
+                if (lower_name == "content-type") {
+                    content_type_was_set_by_cgi = true;
                 }
             }
         }
-        
-        if (!has_status) {
-            response.setStatusCode(HttpUtils::HttpStatusCode::OK);
-        }
-        response.setBody(response_body);
-    } else {
-        // No headers, treat as plain output
-        response.setStatusCode(HttpUtils::HttpStatusCode::OK);
-        response.setBody(output);
     }
-    
+    if (!content_type_was_set_by_cgi) {
+        response.insertHeader("Content-Type", "text/plain");
+    }
+    response.setBody(body_part);
+    if (!status_was_set_by_cgi) {
+        response.setStatusCode(HttpUtils::HttpStatusCode::OK);
+    }
     return response;
 }
 

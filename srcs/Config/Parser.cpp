@@ -90,6 +90,22 @@ void validateServerHasRootLocation(const ConfigParser::ServerConfig& server) {
 }
 
 /**
+ * @brief Validate CGI configuration in a location block
+ * @param location LocationConfig object to validate
+ * @throws std::runtime_error if CGI configuration is invalid
+ */
+void validateLocationCgiConfig(const ConfigParser::LocationConfig& location) {
+    // Check that cgi_ext and cgi_path have matching sizes for proper pairing
+    if (!location.cgi_ext.empty() || !location.cgi_path.empty()) {
+        if (location.cgi_ext.size() != location.cgi_path.size()) {
+            throwError("Number of cgi_ext entries (" + std::to_string(location.cgi_ext.size()) + 
+                      ") must match number of cgi_path entries (" + std::to_string(location.cgi_path.size()) + 
+                      ") for proper extension-interpreter pairing in location '" + location.path + "'", 0);
+        }
+    }
+}
+
+/**
  * @brief Check if directive name is in the list of known/valid directives
  * @param directive Directive name to check
  * @return true if directive is recognized as valid
@@ -265,7 +281,7 @@ void parseLocationDirective(ConfigParser::LocationConfig& location, const std::v
         catch (...) {
             throwError("Invalid error_page format", keyword.line);
         }
-    }  else if (keyword.value == "cgi_path" && !values.empty()) {
+    } else if (keyword.value == "cgi_path" && !values.empty()) {
         location.cgi_path = values;
     } else if (keyword.value == "cgi_ext" && !values.empty()) {
         location.cgi_ext = values;
@@ -302,11 +318,13 @@ void parseLocationBlock(ConfigParser::ServerConfig& server, const std::vector<Co
         }
         parseLocationDirective(location, tokens, pos);
     }
+
     
     if (pos >= tokens.size() || tokens[pos].type != ConfigParser::TokenType::CLOSE_BRACE) {
          throwError("Expected '}' to close 'location' block", tokens.back().line);
     }
     pos++; // Consume '}'
+    validateLocationCgiConfig(location);
     server.locations.push_back(location);
 }
 
