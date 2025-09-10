@@ -149,20 +149,6 @@ HttpResponse CgiHandler::execute(const HttpRequest& request, const ConfigParser:
  */
 HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std::string& script_path,
                                           const std::string& interpreter, int input_pipe[2], int output_pipe[2]) {
-    // Write request body to script's stdin
-    const std::string& body = request.getBody();
-    if (!body.empty()) {
-        ssize_t written = write(input_pipe[1], body.c_str(), body.size());
-        if (written == -1) {
-            close(input_pipe[0]);
-            close(input_pipe[1]);
-            close(output_pipe[0]);
-            close(output_pipe[1]);
-            return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
-                                       "Failed to write request body to CGI");
-        }
-    }
-    close(input_pipe[1]);
 
     auto envp = setupEnvironment(request, script_path);
 
@@ -171,10 +157,14 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
         if (dup2(input_pipe[0], STDIN_FILENO) == -1 ||
             dup2(output_pipe[1], STDOUT_FILENO) == -1) {
             close(input_pipe[0]);
+            close(input_pipe[1]);
+            close(output_pipe[0]);
             close(output_pipe[1]);
             _exit(EXIT_FAILURE);
         }
         close(input_pipe[0]);
+        close(input_pipe[1]);
+        close(output_pipe[0]);
         close(output_pipe[1]);
 
         const char* args[] = { interpreter.c_str(), script_path.c_str(), nullptr };
@@ -183,7 +173,6 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
     }
 
     if (pid == -1) {
-        // Fork failed
         close(input_pipe[0]);
         close(input_pipe[1]);
         close(output_pipe[0]);
@@ -191,27 +180,71 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
         return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "Fork failed");
     }
 
-    // Parent process
     close(input_pipe[0]);
     close(output_pipe[1]);
+
+    const std::string& body = request.getBody();
+    if (!body.empty()) {
+        if (write(input_pipe[1], body.c_str(), body.size()) == -1) {
+            Logger::warning("Failed to write request body to CGI script");
+        }
+    }
+    close(input_pipe[1]);
+
+    fcntl(output_pipe[0], F_SETFL, O_NONBLOCK);
 
     std::string output;
     char buffer[CGI_BUFSIZE];
     ssize_t bytes_read;
+    auto start_time = std::chrono::steady_clock::now();
+    int status = 0;
+    bool timed_out = false;
+
+    while (true) {
+        pid_t result = waitpid(pid, &status, WNOHANG);
+        if (result == pid) {
+            break;
+        }
+        if (result == -1) {
+            Logger::error("waitpid failed: " + std::string(strerror(errno)));
+            kill(pid, SIGKILL);
+            waitpid(pid, NULL, 0);
+            close(output_pipe[0]);
+            return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "waitpid failed");
+        }
+
+        bytes_read = read(output_pipe[0], buffer, sizeof(buffer) - 1);
+        if (bytes_read > 0) {
+            buffer[bytes_read] = '\0';
+            output += buffer;
+        } else if (bytes_read == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+            break;
+        }
+
+        auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
+        if (elapsed_seconds >= CGI_TIMEOUT) {
+            Logger::error("CGI script timed out. Killing process " + std::to_string(pid));
+            kill(pid, SIGKILL);
+            waitpid(pid, &status, 0);
+            timed_out = true;
+            break;
+        }
+        usleep(10000);
+    }
+
     while ((bytes_read = read(output_pipe[0], buffer, sizeof(buffer) - 1)) > 0) {
         buffer[bytes_read] = '\0';
         output += buffer;
     }
+
     close(output_pipe[0]);
 
-    int status;
-    waitpid(pid, &status, 0);
-
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-        return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR,
-                                   "CGI script exited with an error");
+    if (timed_out) {
+        return createErrorResponse(HttpUtils::HttpStatusCode::GATEWAY_TIMEOUT, "CGI script timeout");
     }
-
+    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
+        return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "CGI script exited with an error");
+    }
     return parseOutput(output);
 }
 
@@ -277,7 +310,7 @@ HttpResponse CgiHandler::parseOutput(const std::string& output) {
     std::istringstream header_stream(headers_part);
     std::string line;
     bool status_was_set_by_cgi = false;
-    bool content_type_was_set_by_cgi = false;
+    std::string content_type_value = "text/plain";
 
     while (std::getline(header_stream, line)) {
         if (line.empty() || (line.size() == 1 && line[0] == '\r')) {
@@ -302,21 +335,17 @@ HttpResponse CgiHandler::parseOutput(const std::string& output) {
                 } catch (...) {
                     Logger::warning("CGI script sent an invalid Status header: " + value);
                 }
+            } else if (lower_name == "content-type") {
+                content_type_value = value;
             } else {
                 response.insertHeader(name, value);
-                if (lower_name == "content-type") {
-                    content_type_was_set_by_cgi = true;
-                }
             }
         }
     }
-    if (!content_type_was_set_by_cgi) {
-        response.insertHeader("Content-Type", "text/plain");
-    }
-    response.setBody(body_part);
     if (!status_was_set_by_cgi) {
         response.setStatusCode(HttpUtils::HttpStatusCode::OK);
     }
+    response.setBody(body_part, content_type_value);
     return response;
 }
 
