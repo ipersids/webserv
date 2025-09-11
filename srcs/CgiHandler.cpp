@@ -217,7 +217,7 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
         if (bytes_read > 0) {
             buffer[bytes_read] = '\0';
             output += buffer;
-        } else if (bytes_read == -1 && errno != EAGAIN && errno != EWOULDBLOCK) {
+        } else if (bytes_read == -1) {
             break;
         }
 
