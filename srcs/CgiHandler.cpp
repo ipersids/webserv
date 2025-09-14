@@ -156,10 +156,6 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
     if (pid == 0) {
         if (dup2(input_pipe[0], STDIN_FILENO) == -1 ||
             dup2(output_pipe[1], STDOUT_FILENO) == -1) {
-            close(input_pipe[0]);
-            close(input_pipe[1]);
-            close(output_pipe[0]);
-            close(output_pipe[1]);
             _exit(EXIT_FAILURE);
         }
         close(input_pipe[0]);
@@ -206,7 +202,7 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
             break;
         }
         if (result == -1) {
-            Logger::error("waitpid failed: " + std::string(strerror(errno)));
+            Logger::error("waitpid failed");
             kill(pid, SIGKILL);
             waitpid(pid, NULL, 0);
             close(output_pipe[0]);
@@ -217,8 +213,6 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
         if (bytes_read > 0) {
             buffer[bytes_read] = '\0';
             output += buffer;
-        } else if (bytes_read == -1) {
-            break;
         }
 
         auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
