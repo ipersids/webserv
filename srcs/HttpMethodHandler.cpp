@@ -72,9 +72,9 @@ HttpResponse HttpMethodHandler::processMethod(
     return response;
   }
 
-  if (CgiHandler::isCgiRequest(uri, *location)) {
+  if (CgiHandler::isCgiRequest(file_path, *location)) {
     Logger::info("Processing CGI request :" + uri);
-    return CgiHandler::execute(request, *location);
+    return CgiHandler::execute(request, *location, file_path);
   }
 
   // perform method GET, POST or DELETE or give error

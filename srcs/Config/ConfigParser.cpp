@@ -16,7 +16,8 @@ LocationConfig::LocationConfig(const ServerConfig& parent) :
     root(parent.root),
     index(parent.index),
     client_max_body_size(parent.client_max_body_size),
-    cgi_pass(parent.cgi_pass),
+    cgi_ext(parent.cgi_ext),
+    cgi_path(parent.cgi_path),
     error_pages(parent.error_pages)
 {}
 
@@ -144,12 +145,14 @@ std::ostream& operator<<(std::ostream& os, const ConfigParser::LocationConfig& l
         os << "\n";
     }
     
-    if (!location.cgi_pass.empty()) {
+    if (!location.cgi_ext.empty() && !location.cgi_path.empty()) {
         os << "        CGI Handlers:\n";
-        for (const auto& [ext, handler] : location.cgi_pass) {
-            os << "          " << ext << " -> " << handler << "\n";
+        size_t count = std::min(location.cgi_ext.size(), location.cgi_path.size());
+        for (size_t i = 0; i < count; ++i) {
+            os << "          " << location.cgi_ext[i] << " -> " << location.cgi_path[i] << "\n";
         }
     }
+    
     
     if (!location.error_pages.empty()) {
         os << "        Error Pages:\n";
