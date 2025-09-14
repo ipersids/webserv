@@ -198,15 +198,8 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
 
     while (true) {
         pid_t result = waitpid(pid, &status, WNOHANG);
-        if (result == pid) {
+        if (result == pid || result == -1) {
             break;
-        }
-        if (result == -1) {
-            Logger::error("waitpid failed");
-            kill(pid, SIGKILL);
-            waitpid(pid, NULL, 0);
-            close(output_pipe[0]);
-            return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "waitpid failed");
         }
 
         bytes_read = read(output_pipe[0], buffer, sizeof(buffer) - 1);
@@ -236,9 +229,7 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
     if (timed_out) {
         return createErrorResponse(HttpUtils::HttpStatusCode::GATEWAY_TIMEOUT, "CGI script timeout");
     }
-    if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
-        return createErrorResponse(HttpUtils::HttpStatusCode::INTERNAL_SERVER_ERROR, "CGI script exited with an error");
-    }
+    
     return parseOutput(output);
 }
 
