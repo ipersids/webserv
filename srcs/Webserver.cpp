@@ -89,7 +89,7 @@ void Webserv::run(void) {
 }
 
 int Webserv::getPortByServerSocket(int server_socket_fd) {
-  for (auto it = _port_to_servfd.begin(); it == _port_to_servfd.end(); it++) {
+  for (auto it = _port_to_servfd.begin(); it != _port_to_servfd.end(); it++) {
     if (it->second == server_socket_fd) return it->first;
   }
   return -1;
@@ -230,9 +230,7 @@ void Webserv::addConnection(int server_socket_fd) {
 
 void Webserv::handleConnection(int client_socket_fd) {
   ssize_t bytes_read = recv(client_socket_fd, _buffer, sizeof(_buffer), 0);
-  if (bytes_read < 0) {
-    return;
-  } else if (bytes_read == 0) {
+  if (bytes_read <= 0) {
     Logger::warning("Client disconnected on fd " +
                     std::to_string(client_socket_fd));
     ///    - disconnect client if received data is empty;
@@ -252,7 +250,7 @@ void Webserv::cleanupTimeOutConnections(void) {
   while (it != _connections.end()) {
     if (it->second->isTimedOut(
             std::chrono::seconds(WEBSERV_CONNECTION_TIMEOUT_SEC)) ==
-        true) 
+        true)
     {
       Logger::info("Connection timed out: fd=" + std::to_string(it->first));
       if (epoll_ctl(_epoll_fd, EPOLL_CTL_DEL, it->first, nullptr) == -1) {

@@ -401,6 +401,9 @@ HttpResponse HttpMethodHandler::handleMultipartFileUpload(
         getMultipartFileName(body, body_part_start, header_end);
     std::string extension =
         std::filesystem::path(filename).extension().string();
+    if (extension.find('.') != std::string::npos) {
+     extension = extension.substr(1, extension.length() - 1);
+    }
     if (!isAllowedFileType(extension)) {
       response.setErrorResponse(
           HttpUtils::HttpStatusCode::FORBIDDEN,
