@@ -4,7 +4,7 @@
 
 #include "HttpMethodHandler.hpp"
 #include "HttpUtils.hpp"
-#include "config.hpp"
+#include "Config.hpp"
 
 // // Test helper class to access protected methods
 // class HttpMethodHandlerTest : public HttpMethodHandler {

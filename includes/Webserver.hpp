@@ -18,7 +18,7 @@
 #include "Connection.hpp"
 #include "HttpMethodHandler.hpp"
 #include "Logger.hpp"
-#include "config.hpp"
+#include "Config.hpp"
 
 extern volatile std::sig_atomic_t shutdown_requested;
 

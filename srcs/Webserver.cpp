@@ -1,6 +1,6 @@
 #include "Webserver.hpp"
 
-#include "config.hpp"
+#include "Config.hpp"
 
 // Constructor and destructor
 
