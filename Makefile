@@ -7,11 +7,11 @@ HDRS		:= -Iincludes
 
 # Directories
 OBJ_DIR		:= obj
-SRC_DIRS	:= srcs srcs/Config
+SRC_DIRS	:= srcs
 VPATH		:= $(SRC_DIRS)
 
 # Sources and objects
-SRCS		:= ConfigParser.cpp Parser.cpp Tokenizer.cpp \
+SRCS		:= ConfigParser.cpp \
 			HttpRequest.cpp \
 			HttpUtils.cpp \
 			HttpRequestParser.cpp \

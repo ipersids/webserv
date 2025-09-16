@@ -20,7 +20,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "config.hpp"
+#include "Config.hpp"
 
 #define CRLF_LENGTH 2
 

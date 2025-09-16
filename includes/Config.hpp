@@ -8,13 +8,13 @@
 namespace ConfigParser {
 
     enum class TokenType {
+        UNKNOWN,
         KEYWORD, 
         VALUE,
         OPEN_BRACE, 
         CLOSE_BRACE, 
         SEMICOLON,
-        END_OF_FILE, 
-        UNKNOWN
+        END_OF_FILE
     };
 
     struct Token {

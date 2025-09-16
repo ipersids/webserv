@@ -20,7 +20,7 @@
 #include "Connection.hpp"
 #include "Logger.hpp"
 #include "Webserver.hpp"
-#include "config.hpp"
+#include "Config.hpp"
 
 int main(int argc, char **argv) {
   if (argc != 2) {

@@ -30,7 +30,7 @@
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
 #include "Logger.hpp"
-#include "config.hpp"
+#include "Config.hpp"
 #include "CgiHandler.hpp"
 
 class HttpRequest;

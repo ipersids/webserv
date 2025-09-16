@@ -2,7 +2,7 @@
 
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
-#include "config.hpp"
+#include "Config.hpp"
 #include "Logger.hpp"
 #include "HttpUtils.hpp"
 #include <array>
