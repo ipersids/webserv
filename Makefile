@@ -1,6 +1,6 @@
 # Compilation variables
 CXX		:= c++
-CXXFLAGS	:= -Wall -Wextra -Werror -std=c++17 -MMD -MP
+CXXFLAGS	:= -Wall -Wextra -Werror -std=c++17 -MMD -MP -O3 -march=native -flto -funroll-loops -fno-omit-frame-pointer
 # -MMD generates dependency files (.d) that list all headers for source
 # -MP adds phony targets for headers to prevent errors if headers are removed
 HDRS		:= -Iincludes
@@ -89,4 +89,4 @@ tclean:
 $(LIB_NAME): $(OBJS)
 	ar rcs $(LIB_NAME) $(OBJS)
 
-.PHONY: $(NAME) all clean fclean re run test-unit test-serv test
+.PHONY: all clean fclean re run test-unit test-serv test
