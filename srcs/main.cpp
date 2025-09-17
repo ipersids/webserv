@@ -19,7 +19,10 @@ int main(int argc, char **argv) {
   std::string path = "tests/test-configs/test.conf";
   if (argc == 2) {
     path = argv[1];
+    std::cout << "Using the config file from arguments: " << path << std::endl;
   }
+  else
+    std::cout << "Using the default config: ./tests/test-configs/test.conf" << std::endl;
 
   try {
     Webserv webserv(path);

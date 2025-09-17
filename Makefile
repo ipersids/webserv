@@ -1,6 +1,6 @@
 # Compilation variables
 CXX		:= c++
-CXXFLAGS	:= -Wall -Wextra -Werror -std=c++17 -MMD -MP
+CXXFLAGS	:= -Wall -Wextra -Werror -std=c++17 -MMD -MP -O3 -march=native -flto -funroll-loops -fno-omit-frame-pointer
 # -MMD generates dependency files (.d) that list all headers for source
 # -MP adds phony targets for headers to prevent errors if headers are removed
 HDRS		:= -Iincludes
@@ -53,40 +53,5 @@ fclean: clean
 
 re: fclean all
 
-# run: all
-# 	ulimit -n 100000 && ./webserv # default ulimit is 1000 we need to cover the max value for connections here
 
-# Include the auto-generated dependency information
--include $(DEPS)
-
-# Testing
-LIB_NAME		:= libwebserv.a
-TEST_UNIT_NAME		:= unit_test.out
-TEST_UNIT_SRCS		:= tests/test_main.cpp \
-				tests/http-unit-tests/test_http_request.cpp \
-				tests/http-unit-tests/test_http_request_parser.cpp \
-				tests/http-unit-tests/test_http_http_utils.cpp
-
-TEST_SERV_NAME		:= serv_test.out
-TEST_SERV_SRCS		:= tests/test_server_main.cpp
-
-test-unit: $(OBJ_DIR) $(LIB_NAME)
-	@echo "Building and running unit tests..."
-	$(CXX) -Wall -Wextra -Werror -std=c++17 $(HDRS) $(TEST_UNIT_SRCS) -L. -lwebserv -o $(TEST_UNIT_NAME)
-	./$(TEST_UNIT_NAME)
-
-test-serv: CXX += -g -DDEBUG -O0 -fsanitize=address -fsanitize=undefined
-test-serv: $(OBJ_DIR) $(LIB_NAME)
-	@echo "Building and running server test..."
-	$(CXX) -Wall -Wextra -Werror -std=c++17 $(HDRS) $(TEST_SERV_SRCS) -L. -lwebserv -o $(TEST_SERV_NAME)
-	./$(TEST_SERV_NAME) tests/test-configs/test.conf
-
-test: test-unit test-serv
-
-tclean:
-	rm -rf $(TEST_UNIT_NAME) $(TEST_SERV_NAME) $(LIB_NAME)
-
-$(LIB_NAME): $(OBJS)
-	ar rcs $(LIB_NAME) $(OBJS)
-
-.PHONY: $(NAME) all clean fclean re run test-unit test-serv test
+.PHONY: all clean fclean re
