@@ -223,9 +223,9 @@ void Webserv::addConnection(int server_socket_fd) {
   /// 4. create connection and add it as unique poiner to _connections
   _connections[client_socketfd] = std::make_unique<Connection>(
       client_socketfd, server_socket_fd, *this, _method_handler);
-  Logger::info("New connection (fd " + std::to_string(client_socketfd) +
-               ") accepted on port " +
-               std::to_string(getPortByServerSocket(server_socket_fd)));
+  // Logger::info("New connection (fd " + std::to_string(client_socketfd) +
+  //              ") accepted on port " +
+  //              std::to_string(getPortByServerSocket(server_socket_fd)));
 }
 
 void Webserv::handleConnection(int client_socket_fd) {

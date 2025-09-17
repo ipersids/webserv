@@ -39,9 +39,9 @@ void Connection::processRequest(std::string&& data) {
   std::stringstream msg;
   msg << "Port: " << _webserv.getPortByServerSocket(_server_fd);
   if (status == HttpRequestParser::Status::WAIT_FOR_DATA) {
-    msg << " -> Received partial request from client fd " << _client_fd
-        << ", waiting for more data";
-    Logger::info(msg.str());
+    // msg << " -> Received partial request from client fd " << _client_fd
+    //     << ", waiting for more data";
+    // Logger::info(msg.str());
     return;
   }
 
@@ -49,10 +49,10 @@ void Connection::processRequest(std::string&& data) {
     if (_request.hasHeader("Host")) {
       msg << ", Host: " << _request.getHeader("Host") << "\n";
     }
-    msg << "\t-> Failed to parse request from client fd " << _client_fd << ": "
-        << _request.getErrorMessage() << " ("
-        << static_cast<int>(_request.getStatusCode()) << ")";
-    Logger::error(msg.str());
+    // msg << "\t-> Failed to parse request from client fd " << _client_fd << ": "
+    //     << _request.getErrorMessage() << " ("
+    //     << static_cast<int>(_request.getStatusCode()) << ")";
+    // Logger::error(msg.str());
     buildParserErrorResponse();
     DBG("\n----------- SENDING RESPONSE [1] -----------\n" << _write_buffer);
     sendResponse();
@@ -106,13 +106,13 @@ void Connection::sendResponse(void) {
       send(_client_fd, _write_buffer.c_str(), _write_buffer.length(), 0);
 
   if (bytes == -1) {
-    Logger::error("Failed to send response to client fd " +
-                  std::to_string(_client_fd) + ": " +
-                  std::string(strerror(errno)));
+    // Logger::error("Failed to send response to client fd " +
+    //               std::to_string(_client_fd) + ": " +
+    //               std::string(strerror(errno)));
   } else {
-    Logger::info("Successfully sent response to client fd " +
-                 std::to_string(_client_fd) +
-                 ", bytes sent: " + std::to_string(bytes));
+    // Logger::info("Successfully sent response to client fd " +
+    //              std::to_string(_client_fd) +
+    //              ", bytes sent: " + std::to_string(bytes));
   }
   cleanup();
 }

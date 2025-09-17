@@ -93,7 +93,6 @@ Config parse(const std::string& filePath) {
     auto tokens = detail::Tokenizer::tokenize(content);
     detail::Tokenizer::classifyTokens(tokens);
 
-    //printTokens(tokens);
     Config config;
     config = detail::Parser::parseTokens(tokens);
     config.config_path = filePath;

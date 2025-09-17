@@ -210,7 +210,7 @@ HttpResponse CgiHandler::executeCgiScript(const HttpRequest& request, const std:
 
         auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time).count();
         if (elapsed_seconds >= CGI_TIMEOUT) {
-            Logger::error("CGI script timed out. Killing process " + std::to_string(pid));
+            // Logger::error("CGI script timed out. Killing process " + std::to_string(pid));
             kill(pid, SIGKILL);
             waitpid(pid, &status, 0);
             timed_out = true;
@@ -318,7 +318,7 @@ HttpResponse CgiHandler::parseOutput(const std::string& output) {
                     response.setStatusCode(static_cast<HttpUtils::HttpStatusCode>(status_code));
                     status_was_set_by_cgi = true;
                 } catch (...) {
-                    Logger::warning("CGI script sent an invalid Status header: " + value);
+                    // Logger::warning("CGI script sent an invalid Status header: " + value);
                 }
             } else if (lower_name == "content-type") {
                 content_type_value = value;
