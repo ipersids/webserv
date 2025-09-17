@@ -558,11 +558,19 @@ bool HttpMethodHandler::isAllowedFileType(const std::string& extension) {
 }
 
 std::string HttpMethodHandler::generateFileName(const std::string& extension) {
-  std::time_t now = std::time(NULL);
-  std::tm* ptm = std::localtime(&now);
-  char buf[32];
+  auto now = std::chrono::system_clock::now();
+  auto time_t = std::chrono::system_clock::to_time_t(now);
+  auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(
+      now.time_since_epoch()) % 100000;
+  
+  std::tm tm_buf;
+  std::tm* ptm = localtime_r(&time_t, &tm_buf);
+  char buf[48];
   std::strftime(buf, 32, "%d.%m.%Y-%H%M%S", ptm);
-  return std::string(buf) + "." + extension;
+  
+  std::string result(buf);
+  result += "-" + std::to_string(microseconds.count());
+  return result + "." + extension;
 }
 
 std::string HttpMethodHandler::generateUploadSuccessHtml(

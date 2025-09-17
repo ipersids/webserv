@@ -26,6 +26,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include "HttpRequest.hpp"
 #include "HttpResponse.hpp"
