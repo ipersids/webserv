@@ -20,14 +20,14 @@ A lightweight, HTTP/1.1 compliant web server built in C++17 for educational purp
 - [x] File Uploads: Multipart form data handling
 - [x] Custom Error Pages: With fallback defaults
 - [x] Configuration System: Nginx-style config parsing
-- [ ] Virtual Hosts: Multiple server support
+- [x] Virtual Hosts: Multiple server support
 - [x] Location Blocks: Routing with method restrictions
 - [x] Chunked Transfer: Request body support
-- [ ] Connection Management: Keep-alive and timeout handling
+- [x] Connection Management: Keep-alive and timeout handling
 - [x] Event-Driven I/O: Epoll-based architecture
 - [x] Security: Path traversal protection
 - [x] Logging: Basic request/error logging
-- [ ] CGI Support: Dynamic script execution
+- [x] CGI Support: Dynamic script execution
 
 ## Project structure
 ```css
